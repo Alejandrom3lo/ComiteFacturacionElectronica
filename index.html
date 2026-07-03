@@ -361,23 +361,6 @@ function useComiteData() {
   return { data, save, status };
 }
 
-function ConnectionPill({ status }) {
-  const map = {
-    connecting: { icon: RefreshCw,  text: "Conectando…",              cls: "bg-white/10 text-blue-200 border-white/20", spin: true },
-    online:     { icon: Cloud,      text: "Sincronizado con Firebase", cls: "bg-emerald-500/20 text-emerald-200 border-emerald-400/30" },
-    local:      { icon: CloudOff,   text: "Modo local — configura Firebase", cls: "bg-yellow-500/20 text-yellow-100 border-yellow-400/30" },
-    error:      { icon: CloudOff,   text: "Sin conexión — cambios no guardados", cls: "bg-rose-500/20 text-rose-200 border-rose-400/30" },
-  };
-  const s = map[status] || map.connecting;
-  const Icon = s.icon;
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${s.cls}`}>
-      <Icon className={`w-3.5 h-3.5 ${s.spin ? "animate-spin" : ""}`} />
-      {s.text}
-    </span>
-  );
-}
-
 /* ---------- AGENDA VIEW ---------- */
 function AgendaView({ comite, customCats, onToggle, onToggleProceso }) {
   const [query, setQuery] = useState("");
@@ -809,6 +792,7 @@ function App() {
   const customCats = data.categorias || [];
   const doneCount = comite.agenda.filter((a) => a.done).length;
   const huCount = comite.release ? Object.values(comite.release.modulos).reduce((a, m) => a + m.features.length, 0) : 0;
+  const issueCount = comite.agenda.filter((a) => typeof a.done === "string" && /issue/i.test(a.done)).length;
 
   // Acciones agenda
   // Completado y "En proceso" son excluyentes: marcar uno quita el otro
@@ -847,17 +831,9 @@ function App() {
     <div className="min-h-screen bg-slate-100 font-sans">
       <header className="bg-gradient-to-r from-slate-900 to-blue-900 text-white">
         <div className="max-w-4xl mx-auto px-5 py-6">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <div className="flex items-center gap-2 text-blue-300 text-xs font-semibold uppercase tracking-widest">
-              <ListChecks className="w-4 h-4" /> Sinco · FE/RE
-            </div>
-            <div className="ml-auto"><ConnectionPill status={status} /></div>
-          </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-white/90 rounded-xl px-2 py-1.5 shadow-sm">
-              <img src="assets/facturacion-electronica.svg" alt="Facturación Electrónica" title="Facturación Electrónica" className="w-9 h-9 md:w-11 md:h-11" />
-              <img src="assets/recepcion-electronica.svg" alt="Recepción Electrónica" title="Recepción Electrónica" className="w-9 h-9 md:w-11 md:h-11" />
-            </div>
+            <img src="assets/facturacion-electronica.svg" alt="Facturación Electrónica" title="Facturación Electrónica" className="w-12 h-12 md:w-14 md:h-14 drop-shadow-lg" />
+            <img src="assets/recepcion-electronica.svg" alt="Recepción Electrónica" title="Recepción Electrónica" className="w-12 h-12 md:w-14 md:h-14 drop-shadow-lg" />
             <h1 className="text-2xl md:text-3xl font-bold">Comité Mensual de Facturación Electrónica</h1>
           </div>
 
@@ -911,11 +887,12 @@ function App() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5">
             <SummaryCard value={comite.agenda.length} label="Temas en agenda" icon={ListChecks} />
             <SummaryCard value={doneCount} label="Completados" icon={CheckCircle2} />
             <SummaryCard value={comite.nuevos.length} label="Temas nuevos" icon={PlusCircle} />
             <SummaryCard value={huCount} label="HU liberadas" icon={Sparkles} />
+            <SummaryCard value={issueCount} label="Issues resueltos" icon={Bug} />
           </div>
         </div>
       </header>
