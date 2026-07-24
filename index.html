@@ -101,6 +101,7 @@ const CalendarPlus = makeIcon(<><rect x="3" y="4" width="18" height="18" rx="2"/
 const X = makeIcon(<><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>);
 const Cloud = makeIcon(<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>);
 const CloudOff = makeIcon(<><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79a7.008 7.008 0 0 0-5.71-4.93"/></>);
+const Flag = makeIcon(<><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></>);
 
 /* ---------- CATEGORÍAS / ESTADOS ---------- */
 const CATS = {
@@ -119,6 +120,12 @@ const STATUS = {
   proximo:   { label: "Próximo comité",      color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: Calendar },
   cotizacion:{ label: "Pendiente cotización",color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: DollarSign },
   reunion:   { label: "Pendiente reunión",   color: "bg-orange-100 text-orange-700 border-orange-200", icon: Users },
+};
+
+/* Prioridad de los temas: sin valor = Normal (no se muestra insignia) */
+const PRIO = {
+  alta: { label: "Prioridad alta", color: "bg-rose-100 text-rose-700 border-rose-200", flag: "text-rose-500" },
+  baja: { label: "Prioridad baja", color: "bg-slate-100 text-slate-500 border-slate-200", flag: "text-slate-400" },
 };
 
 const CAT_PALETTE = [
@@ -362,7 +369,7 @@ function useComiteData() {
 }
 
 /* ---------- AGENDA VIEW ---------- */
-function AgendaView({ comite, customCats, onToggle, onToggleProceso }) {
+function AgendaView({ comite, customCats, onToggle, onToggleProceso, onTogglePrio }) {
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -472,6 +479,13 @@ function AgendaView({ comite, customCats, onToggle, onToggleProceso }) {
                       >
                         <RefreshCw className="w-5 h-5" />
                       </button>
+                      <button
+                        onClick={() => onTogglePrio(it.id)}
+                        className={`transition-colors ${it.prio && PRIO[it.prio] ? PRIO[it.prio].flag : "text-slate-300 hover:text-rose-500"}`}
+                        title={`Prioridad: ${it.prio && PRIO[it.prio] ? PRIO[it.prio].label.replace("Prioridad ", "") : "normal"} (clic para cambiar)`}
+                      >
+                        <Flag className="w-5 h-5" />
+                      </button>
                     </div>
                     <span className="text-xs font-mono text-slate-400 mt-1 w-6 shrink-0">{String(it.id).padStart(2, "0")}</span>
                     <div className="min-w-0 flex-1">
@@ -490,6 +504,9 @@ function AgendaView({ comite, customCats, onToggle, onToggleProceso }) {
                           const SI = S.icon;
                           return <Badge className={S.color}><SI className="w-3 h-3" />{S.label}</Badge>;
                         })()}
+                        {it.prio && PRIO[it.prio] && (
+                          <Badge className={PRIO[it.prio].color}><Flag className="w-3 h-3" />{PRIO[it.prio].label}</Badge>
+                        )}
                         {(it.resp || []).map((r) => (
                           <Badge key={r} className="bg-slate-100 text-slate-600 border-slate-200"><Users className="w-3 h-3" />{r}</Badge>
                         ))}
@@ -802,6 +819,10 @@ function App() {
   const toggleProceso = (itemId) => updateComite(comite.id, (c) => ({
     ...c, agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, status: a.status === "proceso" ? undefined : "proceso", done: a.status === "proceso" ? a.done : false } : a)),
   }));
+  // Prioridad cíclica: normal → alta → baja → normal (normal no se guarda)
+  const togglePrio = (itemId) => updateComite(comite.id, (c) => ({
+    ...c, agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, prio: !a.prio ? "alta" : a.prio === "alta" ? "baja" : undefined } : a)),
+  }));
   // Acciones nuevos
   const addNuevo = (item) => updateComite(comite.id, (c) => ({ ...c, nuevos: [...c.nuevos, item] }));
   const removeNuevo = (id) => updateComite(comite.id, (c) => ({ ...c, nuevos: c.nuevos.filter((n) => n.id !== id) }));
@@ -908,7 +929,7 @@ function App() {
       </div>
 
       <main className="max-w-4xl mx-auto px-5 py-6">
-        {tab === "agenda" && <AgendaView comite={comite} customCats={customCats} onToggle={toggleAgenda} onToggleProceso={toggleProceso} />}
+        {tab === "agenda" && <AgendaView comite={comite} customCats={customCats} onToggle={toggleAgenda} onToggleProceso={toggleProceso} onTogglePrio={togglePrio} />}
         {tab === "nuevos" && <NuevosView comite={comite} customCats={customCats} onAdd={addNuevo} onRemove={removeNuevo} onToggle={toggleNuevo} onCreateCat={createCat} />}
         {tab === "release" && <ReleaseView comite={comite} />}
       </main>
