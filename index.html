@@ -105,6 +105,8 @@ const ArrowUp = makeIcon(<><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></>);
 const ArrowDown = makeIcon(<><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></>);
 const ArrowUpDown = makeIcon(<><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></>);
 const Kanban = makeIcon(<><path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/></>);
+const Pencil = makeIcon(<><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></>);
+const User = makeIcon(<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>);
 const Circle = makeIcon(<circle cx="12" cy="12" r="10"/>);
 const Ban = makeIcon(<><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></>);
 const ArrowRight = makeIcon(<><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>);
@@ -551,7 +553,7 @@ function AgendaView({ comite, customCats, miembros, onToggle, onToggleProceso, o
                     </div>
                     <span className="text-xs font-mono text-slate-400 mt-1 w-6 shrink-0">{String(it.id).padStart(2, "0")}</span>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm leading-snug ${it.done ? "text-slate-400 line-through" : "text-slate-700"}`}>{it.text}</p>
+                      <p className={`text-sm leading-snug ${it.done ? "text-slate-400 line-through" : "text-slate-700"}`}><RefText text={it.text} /></p>
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         {it.done && (
                           <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
@@ -605,7 +607,7 @@ function AgendaView({ comite, customCats, miembros, onToggle, onToggleProceso, o
                                 >
                                   <SI className="w-3.5 h-3.5" />
                                 </button>
-                                <span className={`leading-snug ${hecha ? "text-slate-400 line-through" : "text-slate-600"}`}>{t.text}</span>
+                                <span className={`leading-snug ${hecha ? "text-slate-400 line-through" : "text-slate-600"}`}><RefText text={t.text} /></span>
                                 {t.resp && <span className="text-slate-400 shrink-0">· {t.resp}</span>}
                                 {t.due && !hecha && <span className={`shrink-0 ${isOverdue(t) ? "text-rose-600 font-medium" : "text-slate-400"}`}>· {isOverdue(t) ? "vencida " : ""}{fmtDue(t.due)}</span>}
                               </li>
@@ -866,14 +868,15 @@ function ReleaseView({ comite }) {
    Se usa tanto en la pestaña Planner como dentro de un tema de la agenda (compact).
    onSubmit recibe { text, resp, due, temaId, newMember }: newMember viene cuando el
    responsable se escribió por primera vez, para guardarlo en data.miembros en el mismo save. */
-function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, defaultTema }) {
-  const [text, setText] = useState("");
-  const [resp, setResp] = useState("");
+function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, defaultTema, initial, submitLabel }) {
+  const [text, setText] = useState(initial ? initial.text : "");
+  const [resp, setResp] = useState(initial && initial.resp ? initial.resp : "");
   const [newResp, setNewResp] = useState("");
-  const [due, setDue] = useState("");
-  const [temaId, setTemaId] = useState(defaultTema != null ? String(defaultTema) : "");
+  const [due, setDue] = useState(initial && initial.due ? initial.due : "");
+  const [temaId, setTemaId] = useState(initial && initial.temaId != null ? String(initial.temaId) : defaultTema != null ? String(defaultTema) : "");
 
   const ready = text.trim() && (resp !== "__new__" || newResp.trim());
+  const editing = !!initial;
 
   const submit = () => {
     if (!ready) return;
@@ -885,6 +888,7 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
       temaId: temaId ? Number(temaId) : null,
       newMember: resp === "__new__" ? r : null,
     });
+    if (editing) return;
     setText("");
     setDue("");
     setTemaId(defaultTema != null ? String(defaultTema) : "");
@@ -895,9 +899,9 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
   const temasPorCat = useMemo(() => {
     if (!agenda) return [];
     const g = {};
-    agenda.filter((a) => !a.done).forEach((a) => { (g[a.cat] = g[a.cat] || []).push(a); });
+    agenda.filter((a) => !a.done || String(a.id) === temaId).forEach((a) => { (g[a.cat] = g[a.cat] || []).push(a); });
     return Object.entries(g);
-  }, [agenda]);
+  }, [agenda, temaId]);
 
   const inputCls = "px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400";
 
@@ -907,8 +911,8 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape" && onCancel) onCancel(); }}
-        placeholder={compact ? "¿Qué hay que hacer para este tema?" : "Describe la tarea…"}
-        autoFocus={compact}
+        placeholder={compact ? "¿Qué hay que hacer para este tema?" : "Describe la tarea… (si incluye 'HU 12345' se enlaza a Azure DevOps)"}
+        autoFocus={compact || editing}
         className={`w-full ${inputCls}`}
       />
       <div className="flex flex-col sm:flex-row gap-2">
@@ -945,7 +949,7 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
           disabled={!ready}
           className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <Plus className="w-4 h-4" /> Agregar
+          {editing ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {submitLabel || (editing ? "Guardar" : "Agregar")}
         </button>
         {onCancel && (
           <button onClick={onCancel} className="flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg text-slate-500 hover:bg-slate-100">
@@ -956,6 +960,44 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
     </div>
   );
 }
+
+/* Enlaza referencias "HU 12345" a Azure DevOps (proyecto FE). Las HD (HelpDesk) se resaltan sin enlace. */
+const AZDO_WI_URL = "https://dev.azure.com/sincosoftsas/FE/_workitems/edit/";
+const REF_RE = /\b(HU|HD)\s*-?\s*(\d{4,7})\b/gi;
+function RefText({ text, className }) {
+  const parts = [];
+  let last = 0, m;
+  REF_RE.lastIndex = 0;
+  while ((m = REF_RE.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    const kind = m[1].toUpperCase();
+    if (kind === "HU") {
+      parts.push(
+        <a key={m.index} href={AZDO_WI_URL + m[2]} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()}
+          className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.5 rounded hover:bg-blue-100 whitespace-nowrap"
+          title={`Abrir HU ${m[2]} en Azure DevOps`}>HU {m[2]}</a>
+      );
+    } else {
+      parts.push(<span key={m.index} className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-1 py-0.5 rounded whitespace-nowrap">HD {m[2]}</span>);
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <span className={className}>{parts}</span>;
+}
+
+/* Semana en curso: hoy + 7 días */
+const addDaysISO = (n) => {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const weekdayOf = (iso) => { const [y, m, d] = iso.split("-").map(Number); return WEEKDAYS[new Date(y, m - 1, d).getDay()]; };
+
+/* Identidad local ("Mis tareas"): solo se recuerda en este navegador */
+const ME_KEY = "comiteFE.me";
+const loadMe = () => { try { return localStorage.getItem(ME_KEY) || ""; } catch (e) { return ""; } };
+const saveMe = (v) => { try { v ? localStorage.setItem(ME_KEY, v) : localStorage.removeItem(ME_KEY); } catch (e) {} };
 
 /* Insignias comunes de una tarea: tema, responsable y fecha límite */
 function TaskMeta({ t, tema, customCats, hideTema }) {
@@ -987,11 +1029,15 @@ function TaskMeta({ t, tema, customCats, hideTema }) {
 
 /* ---------- PLANNER VIEW ---------- */
 function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }) {
-  const [mode, setMode] = useState("board"); // board | list
-  const [respFilter, setRespFilter] = useState("all");
+  const [me, setMeState] = useState(loadMe);
+  const [mode, setMode] = useState("board"); // board | list | week
+  const [respFilter, setRespFilter] = useState(() => (loadMe() ? "__me__" : "all"));
   const [showDone, setShowDone] = useState(false);
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+
+  const setMe = (v) => { setMeState(v); saveMe(v); setRespFilter(v ? "__me__" : "all"); };
 
   const tareas = comite.tareas || [];
   const temaDe = (t) => (t.temaId != null ? comite.agenda.find((a) => a.id === t.temaId) : null);
@@ -1001,9 +1047,10 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
 
   const visible = useMemo(() => tareas.filter((t) => {
     if (respFilter === "__none__") return !t.resp;
+    if (respFilter === "__me__") return me && t.resp === me;
     if (respFilter !== "all") return t.resp === respFilter;
     return true;
-  }), [tareas, respFilter]);
+  }), [tareas, respFilter, me]);
 
   const move = (t, dir) => {
     const i = TASK_ORDER.indexOf(t.estado);
@@ -1017,7 +1064,24 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
     setOverCol(null);
   };
 
-  const respChips = miembros;
+  const saveEdit = (id, patch) => { onUpdate(id, patch); setEditingId(null); };
+
+  const formProps = { miembros, agenda: comite.agenda, customCats };
+  const rowProps = (t) => ({
+    t, tema: temaDe(t), customCats, formProps,
+    editing: editingId === t.id,
+    onEdit: () => setEditingId(editingId === t.id ? null : t.id),
+    onSaveEdit: (patch) => saveEdit(t.id, patch),
+    onCancelEdit: () => setEditingId(null),
+    onEstado: (estado) => onUpdate(t.id, { estado }),
+    onRemove: () => onRemove(t.id),
+  });
+
+  const ModeBtn = ({ k, icon: I, children }) => (
+    <button onClick={() => setMode(k)} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md ${mode === k ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+      <I className="w-3.5 h-3.5" /> {children}
+    </button>
+  );
 
   return (
     <div className="space-y-5">
@@ -1032,10 +1096,10 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
             </div>
           );
         })}
-        <div className={`rounded-xl border px-3 py-2 ${vencidas ? "bg-rose-100 text-rose-700 border-rose-200" : "bg-white text-slate-500 border-slate-200"}`}>
+        <button onClick={() => setMode("week")} className={`text-left rounded-xl border px-3 py-2 transition-colors ${vencidas ? "bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200/70" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`} title="Ver la semana">
           <div className="flex items-center gap-1.5 text-xs font-medium"><AlertCircle className="w-3.5 h-3.5" />Vencidas</div>
           <div className="text-xl font-bold mt-0.5">{vencidas}</div>
-        </div>
+        </button>
       </div>
 
       {/* Nueva tarea */}
@@ -1043,28 +1107,39 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
         <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 mb-3">
           <PlusCircle className="w-4 h-4 text-blue-600" /> Nueva tarea en {comite.nombre}
         </p>
-        <TaskForm miembros={miembros} agenda={comite.agenda} customCats={customCats} onSubmit={onAdd} />
+        <TaskForm {...formProps} onSubmit={onAdd} />
         <p className="text-xs text-slate-400 mt-2">Tip: también puedes crear tareas desde cada tema en la pestaña Agenda. Enter para agregar rápido.</p>
       </div>
 
       {/* Controles */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         <div className="flex gap-1 bg-white rounded-lg border border-slate-200 p-1 self-start">
-          <button onClick={() => setMode("board")} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md ${mode === "board" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}><Kanban className="w-3.5 h-3.5" /> Tablero</button>
-          <button onClick={() => setMode("list")} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md ${mode === "list" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}><LayoutList className="w-3.5 h-3.5" /> Por responsable</button>
+          <ModeBtn k="board" icon={Kanban}>Tablero</ModeBtn>
+          <ModeBtn k="list" icon={LayoutList}>Por responsable</ModeBtn>
+          <ModeBtn k="week" icon={Calendar}>Esta semana</ModeBtn>
         </div>
-        <div className="flex flex-wrap gap-2 sm:ml-2">
+        <div className="flex flex-wrap gap-2">
+          {me && <FilterChip active={respFilter === "__me__"} onClick={() => setRespFilter(respFilter === "__me__" ? "all" : "__me__")}>Mis tareas</FilterChip>}
           <FilterChip active={respFilter === "all"} onClick={() => setRespFilter("all")} subtle>Todos</FilterChip>
-          {respChips.map((m) => (
+          {miembros.map((m) => (
             <FilterChip key={m} active={respFilter === m} onClick={() => setRespFilter(respFilter === m ? "all" : m)} subtle>{m}</FilterChip>
           ))}
           <FilterChip active={respFilter === "__none__"} onClick={() => setRespFilter(respFilter === "__none__" ? "all" : "__none__")} subtle>Sin responsable</FilterChip>
         </div>
-        {mode === "list" && (
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 sm:ml-auto cursor-pointer select-none">
-            <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="rounded" /> Mostrar hechas
+        <div className="flex items-center gap-3 lg:ml-auto">
+          {mode !== "board" && (
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none whitespace-nowrap">
+              <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="rounded" /> Mostrar hechas
+            </label>
+          )}
+          <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap" title="Se recuerda solo en este navegador">
+            <User className="w-3.5 h-3.5 text-slate-400" /> Yo soy
+            <select value={me} onChange={(e) => setMe(e.target.value)} className="text-xs rounded-md border border-slate-300 bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">—</option>
+              {miembros.map((m) => (<option key={m} value={m}>{m}</option>))}
+            </select>
           </label>
-        )}
+        </div>
       </div>
 
       {tareas.length === 0 && (
@@ -1098,10 +1173,10 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
                 <div className="p-2 space-y-2 min-h-[80px]">
                   {items.length === 0 && <p className="text-xs text-slate-400 text-center py-4">{isOver ? "Suelta aquí" : "Sin tareas"}</p>}
                   {items.map((t) => (
-                    <TaskCard key={t.id} t={t} tema={temaDe(t)} customCats={customCats}
+                    <TaskCard key={t.id} {...rowProps(t)}
                       dragging={dragId === t.id}
                       onDragStart={() => setDragId(t.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                      onMove={(dir) => move(t, dir)} onRemove={() => onRemove(t.id)} />
+                      onMove={(dir) => move(t, dir)} />
                   ))}
                 </div>
               </div>
@@ -1124,39 +1199,58 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
               const items = groups[key].sort((a, b) => TASK_ORDER.indexOf(a.estado) - TASK_ORDER.indexOf(b.estado) || sortTareas(a, b));
               const pend = items.filter((t) => t.estado !== "hecho").length;
               return (
-                <div key={key} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200 bg-slate-50">
-                    <Users className="w-4 h-4 text-slate-500" />
-                    <h3 className="text-sm font-semibold text-slate-800">{key === "__none__" ? "Sin responsable" : key}</h3>
-                    <span className="ml-auto text-xs text-slate-500">{pend} pendiente(s) · {items.length} en total</span>
-                  </div>
-                  <ul className="divide-y divide-slate-100">
-                    {items.map((t) => {
-                      const S = TASK_STATES[t.estado] || TASK_STATES.todo;
-                      return (
-                        <li key={t.id} className={`flex gap-3 px-4 py-3 hover:bg-slate-50 ${t.estado === "hecho" ? "bg-emerald-50/40" : ""}`}>
-                          <select
-                            value={t.estado}
-                            onChange={(e) => onUpdate(t.id, { estado: e.target.value })}
-                            className={`shrink-0 self-start text-xs font-medium rounded-full border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${S.color}`}
-                            title="Cambiar estado"
-                          >
-                            {TASK_ORDER.map((k) => (<option key={k} value={k}>{TASK_STATES[k].label}</option>))}
-                          </select>
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.text}</p>
-                            <div className="mt-1.5"><TaskMeta t={{ ...t, resp: null }} tema={temaDe(t)} customCats={customCats} /></div>
-                          </div>
-                          <button onClick={() => onRemove(t.id)} className="text-slate-300 hover:text-rose-500 transition-colors self-start mt-0.5" title="Eliminar tarea">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                <TaskGroup key={key} icon={Users} title={key === "__none__" ? "Sin responsable" : key} subtitle={`${pend} pendiente(s) · ${items.length} en total`}>
+                  {items.map((t) => <TaskRow key={t.id} {...rowProps(t)} />)}
+                </TaskGroup>
               );
             })}
+          </div>
+        );
+      })()}
+
+      {/* Esta semana: vencidas, hoy y próximos 7 días */}
+      {tareas.length > 0 && mode === "week" && (() => {
+        const today = todayISO();
+        const tomorrow = addDaysISO(1);
+        const limit = addDaysISO(7);
+        const pend = visible.filter((t) => showDone || t.estado !== "hecho");
+        const conFecha = pend.filter((t) => t.due && t.due <= limit).sort(sortTareas);
+        const sinFecha = pend.filter((t) => !t.due && t.estado !== "hecho");
+        const masTarde = pend.filter((t) => t.due && t.due > limit).length;
+        const groups = [];
+        const push = (key, title, cls, t) => {
+          let g = groups.find((x) => x.key === key);
+          if (!g) { g = { key, title, cls, items: [] }; groups.push(g); }
+          g.items.push(t);
+        };
+        conFecha.forEach((t) => {
+          if (t.estado !== "hecho" && t.due < today) push("venc", "Vencidas", "bg-rose-50 text-rose-800 border-rose-200", t);
+          else if (t.due === today) push("hoy", `Hoy · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-amber-50 text-amber-800 border-amber-200", t);
+          else if (t.due === tomorrow) push(t.due, `Mañana · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-indigo-50 text-indigo-800 border-indigo-200", t);
+          else if (t.due < today) push("hechas", "Hechas con fecha pasada", "bg-emerald-50 text-emerald-800 border-emerald-200", t);
+          else push(t.due, `${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-slate-50 text-slate-700 border-slate-200", t);
+        });
+        return (
+          <div className="space-y-4">
+            {groups.length === 0 && (
+              <div className="text-center py-8 border border-dashed border-slate-300 rounded-xl">
+                <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Nada vence en los próximos 7 días{respFilter !== "all" ? " con este filtro" : ""}.</p>
+              </div>
+            )}
+            {groups.map((g) => (
+              <TaskGroup key={g.key} icon={g.key === "venc" ? AlertCircle : Calendar} title={g.title} subtitle={`${g.items.length} tarea(s)`} headCls={g.cls}>
+                {g.items.map((t) => <TaskRow key={t.id} {...rowProps(t)} />)}
+              </TaskGroup>
+            ))}
+            {(sinFecha.length > 0 || masTarde > 0) && (
+              <p className="text-xs text-slate-400 text-center">
+                {sinFecha.length > 0 && `${sinFecha.length} pendiente(s) sin fecha límite`}
+                {sinFecha.length > 0 && masTarde > 0 && " · "}
+                {masTarde > 0 && `${masTarde} con fecha posterior a esta semana`}
+                {" · se ven en Tablero o Por responsable"}
+              </p>
+            )}
           </div>
         );
       })()}
@@ -1164,9 +1258,57 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
   );
 }
 
-function TaskCard({ t, tema, customCats, dragging, onDragStart, onDragEnd, onMove, onRemove }) {
+function TaskGroup({ icon: Icon, title, subtitle, headCls, children }) {
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+      <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${headCls || "bg-slate-50 text-slate-800 border-slate-200"}`}>
+        <Icon className="w-4 h-4 opacity-70" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="ml-auto text-xs opacity-70">{subtitle}</span>
+      </div>
+      <ul className="divide-y divide-slate-100">{children}</ul>
+    </div>
+  );
+}
+
+/* Fila de tarea (lista y semana) */
+function TaskRow({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, onCancelEdit, onEstado, onRemove }) {
+  const S = TASK_STATES[t.estado] || TASK_STATES.todo;
+  return (
+    <li className={`px-4 py-3 hover:bg-slate-50 ${t.estado === "hecho" ? "bg-emerald-50/40" : ""}`}>
+      <div className="flex gap-3">
+        <select
+          value={t.estado}
+          onChange={(e) => onEstado(e.target.value)}
+          className={`shrink-0 self-start text-xs font-medium rounded-full border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${S.color}`}
+          title="Cambiar estado"
+        >
+          {TASK_ORDER.map((k) => (<option key={k} value={k}>{TASK_STATES[k].label}</option>))}
+        </select>
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}><RefText text={t.text} /></p>
+          <div className="mt-1.5"><TaskMeta t={t} tema={tema} customCats={customCats} /></div>
+        </div>
+        <div className="flex gap-1 self-start mt-0.5 shrink-0">
+          <button onClick={onEdit} className={`transition-colors ${editing ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`} title="Editar tarea"><Pencil className="w-4 h-4" /></button>
+          <button onClick={onRemove} className="text-slate-300 hover:text-rose-500 transition-colors" title="Eliminar tarea"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      </div>
+      {editing && <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />}
+    </li>
+  );
+}
+
+function TaskCard({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, onCancelEdit, onRemove, dragging, onDragStart, onDragEnd, onMove }) {
   const i = TASK_ORDER.indexOf(t.estado);
   const overdue = isOverdue(t);
+  if (editing) {
+    return (
+      <div className="rounded-lg border border-blue-300 bg-white p-2.5 shadow-sm">
+        <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />
+      </div>
+    );
+  }
   return (
     <div
       draggable
@@ -1174,7 +1316,7 @@ function TaskCard({ t, tema, customCats, dragging, onDragStart, onDragEnd, onMov
       onDragEnd={onDragEnd}
       className={`group rounded-lg border bg-white p-2.5 shadow-sm cursor-grab active:cursor-grabbing transition-opacity ${dragging ? "opacity-40" : ""} ${overdue ? "border-rose-300" : "border-slate-200"}`}
     >
-      <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.text}</p>
+      <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}><RefText text={t.text} /></p>
       <div className="mt-2"><TaskMeta t={t} tema={tema} customCats={customCats} /></div>
       <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
         <button onClick={() => onMove(-1)} disabled={i <= 0} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent" title={i > 0 ? `Mover a ${TASK_STATES[TASK_ORDER[i - 1]].label}` : ""}>
@@ -1188,7 +1330,10 @@ function TaskCard({ t, tema, customCats, dragging, onDragStart, onDragEnd, onMov
             <CheckCircle2 className="w-4 h-4" />
           </button>
         )}
-        <button onClick={onRemove} className="ml-auto p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-rose-50" title="Eliminar tarea">
+        <button onClick={onEdit} className="ml-auto p-1 rounded text-slate-300 hover:text-blue-600 hover:bg-blue-50" title="Editar tarea">
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button onClick={onRemove} className="p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-rose-50" title="Eliminar tarea">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -1254,9 +1399,25 @@ function App() {
 
   // Acciones agenda
   // Completado y "En proceso" son excluyentes: marcar uno quita el otro
-  const toggleAgenda = (itemId) => updateComite(comite.id, (c) => ({
-    ...c, agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, done: a.done ? false : true, status: a.status === "proceso" ? undefined : a.status } : a)),
-  }));
+  // Un tema con tareas abiertas en el planner no se completa en silencio: se pregunta
+  // y, si se confirma, sus tareas pasan a "Hecho" en la misma escritura.
+  const toggleAgenda = (itemId) => {
+    const item = comite.agenda.find((a) => a.id === itemId);
+    const abiertas = item && !item.done ? (comite.tareas || []).filter((t) => t.temaId === itemId && t.estado !== "hecho") : [];
+    if (abiertas.length > 0) {
+      const ok = window.confirm(
+        `Este tema tiene ${abiertas.length} tarea(s) abierta(s) en el Planner:\n\n` +
+        abiertas.map((t) => `• ${t.text}${t.resp ? ` (${t.resp})` : ""}`).join("\n") +
+        `\n\n¿Completar el tema y marcar esas tareas como hechas?`
+      );
+      if (!ok) return;
+    }
+    updateComite(comite.id, (c) => ({
+      ...c,
+      agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, done: a.done ? false : true, status: a.status === "proceso" ? undefined : a.status } : a)),
+      tareas: abiertas.length ? (c.tareas || []).map((t) => (t.temaId === itemId && t.estado !== "hecho" ? { ...t, estado: "hecho" } : t)) : c.tareas,
+    }));
+  };
   const toggleProceso = (itemId) => updateComite(comite.id, (c) => ({
     ...c, agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, status: a.status === "proceso" ? undefined : "proceso", done: a.status === "proceso" ? a.done : false } : a)),
   }));
@@ -1276,9 +1437,14 @@ function App() {
       comites: data.comites.map((c) => (c.id === comite.id ? { ...c, tareas: [...(c.tareas || []), tarea] } : c)),
     });
   };
-  const updateTarea = (id, patch) => updateComite(comite.id, (c) => ({
-    ...c, tareas: (c.tareas || []).map((t) => (t.id === id ? { ...t, ...patch } : t)),
-  }));
+  const updateTarea = (id, { newMember, ...patch }) => {
+    const nextMiembros = newMember && !miembros.includes(newMember) ? [...(data.miembros || SEED_MIEMBROS), newMember] : (data.miembros || SEED_MIEMBROS);
+    save({
+      ...data,
+      miembros: nextMiembros,
+      comites: data.comites.map((c) => (c.id === comite.id ? { ...c, tareas: (c.tareas || []).map((t) => (t.id === id ? { ...t, ...patch } : t)) } : c)),
+    });
+  };
   const removeTarea = (id) => updateComite(comite.id, (c) => ({ ...c, tareas: (c.tareas || []).filter((t) => t.id !== id) }));
   const tareasPend = (comite.tareas || []).filter((t) => t.estado !== "hecho").length;
   const tareasVenc = (comite.tareas || []).filter(isOverdue).length;
