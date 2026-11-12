@@ -18,8 +18,149 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
+<!-- Serif de los títulos del Planner (Claude Design). Si no carga, se usa Georgia/Palatino. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" />
+
 <style>
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+  /* ================================================================
+     CLAUDE DESIGN — solo aplica dentro de .cd (pestaña Planner)
+     Marfil cálido, líneas finas, títulos en serif y acento arcilla.
+     Los componentes compartidos con la Agenda (TaskForm, FilterChip,
+     RefText) llevan clases "gancho" cd-* que fuera de .cd no hacen nada.
+     ================================================================ */
+  .cd {
+    --cd-bg: #FAF9F5;
+    --cd-surface: #FFFFFF;
+    --cd-sunken: #F0EEE6;
+    --cd-line: #E8E6DC;
+    --cd-line-strong: #D1CFC5;
+    --cd-ink: #141413;
+    --cd-ink-2: #5E5D59;
+    --cd-ink-3: #73726C;
+    --cd-ink-4: #A3A199;
+    --cd-clay: #D97757;
+    --cd-clay-strong: #C15F3C;
+    --cd-clay-deep: #A94F30;
+    --cd-clay-soft: #F6E4DC;
+    --cd-clay-line: #EBCFC3;
+    --cd-sky: #6A9BCC;   --cd-sky-soft: #E4EDF6;   --cd-sky-ink: #2F5F8F;   --cd-sky-line: #C9DAEC;
+    --cd-olive: #788C5D; --cd-olive-soft: #E7ECDD; --cd-olive-ink: #4C5F35; --cd-olive-line: #D0DABD;
+    --cd-ochre: #C4923A; --cd-ochre-soft: #F5EAD3; --cd-ochre-ink: #7D5A14; --cd-ochre-line: #E8D5AC;
+    --cd-red: #BF4D43;   --cd-red-soft: #F8E6E2;   --cd-red-ink: #9A3A31;   --cd-red-line: #EDCBC5;
+    --cd-serif: "Source Serif 4", "Tiempos Text", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    background: var(--cd-bg);
+    color: var(--cd-ink);
+    border: 1px solid var(--cd-line);
+    border-radius: 18px;
+    padding: 24px;
+  }
+  @media (max-width: 640px) { .cd { padding: 16px; border-radius: 14px; } }
+  .cd button:focus-visible, .cd a:focus-visible { outline: 2px solid var(--cd-clay); outline-offset: 2px; }
+  .cd input[type="checkbox"] { accent-color: var(--cd-clay-strong); }
+
+  /* Estados de tarea: cada uno define su tinta, fondo y línea */
+  .cd .cd-st-todo      { --st: #87867F;          --st-bg: var(--cd-sunken);     --st-fg: var(--cd-ink-2);     --st-line: #E0DDD0; }
+  .cd .cd-st-proceso   { --st: var(--cd-sky);    --st-bg: var(--cd-sky-soft);   --st-fg: var(--cd-sky-ink);   --st-line: var(--cd-sky-line); }
+  .cd .cd-st-bloqueado { --st: var(--cd-ochre);  --st-bg: var(--cd-ochre-soft); --st-fg: var(--cd-ochre-ink); --st-line: var(--cd-ochre-line); }
+  .cd .cd-st-hecho     { --st: var(--cd-olive);  --st-bg: var(--cd-olive-soft); --st-fg: var(--cd-olive-ink); --st-line: var(--cd-olive-line); }
+  .cd .cd-st-icon { color: var(--st); }
+
+  /* Tipografía */
+  .cd .cd-title { font-family: var(--cd-serif); font-size: 30px; line-height: 1.15; font-weight: 500; letter-spacing: -0.015em; }
+  .cd .cd-sub   { font-size: 14px; color: var(--cd-ink-2); margin-top: 2px; }
+  .cd .cd-h3    { font-family: var(--cd-serif); font-size: 16px; line-height: 1.3; font-weight: 600; letter-spacing: -0.005em; }
+  .cd .cd-hint  { font-size: 12px; color: var(--cd-ink-3); }
+  .cd .cd-count { font-size: 12px; color: var(--cd-ink-3); font-variant-numeric: tabular-nums; }
+
+  /* Resumen */
+  .cd .cd-stat { text-align: left; background: var(--cd-surface); border: 1px solid var(--cd-line); border-radius: 12px; padding: 12px 14px; }
+  .cd .cd-stat-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--cd-ink-2); }
+  .cd .cd-stat-num { font-family: var(--cd-serif); font-size: 30px; line-height: 1.1; font-weight: 500; margin-top: 4px; font-variant-numeric: lining-nums tabular-nums; }
+  .cd button.cd-stat { cursor: pointer; transition: border-color .15s, background-color .15s; }
+  .cd button.cd-stat:hover { border-color: var(--cd-line-strong); }
+  .cd .cd-stat.is-alert { background: var(--cd-red-soft); border-color: var(--cd-red-line); }
+  .cd .cd-stat.is-alert .cd-stat-label, .cd .cd-stat.is-alert .cd-stat-num { color: var(--cd-red-ink); }
+  .cd button.cd-stat.is-alert:hover { border-color: var(--cd-red); }
+
+  /* Tarjetas y grupos */
+  .cd .cd-card { background: var(--cd-surface); border: 1px solid var(--cd-line); border-radius: 14px; }
+  .cd .cd-accent { color: var(--cd-clay-strong); }
+  .cd .cd-group { background: var(--cd-surface); border: 1px solid var(--cd-line); border-radius: 14px; overflow: hidden; }
+  .cd .cd-group-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--cd-sunken); border-bottom: 1px solid var(--cd-line); color: var(--cd-ink); }
+  .cd .cd-group-head.cd-gh-danger { background: var(--cd-red-soft);   color: var(--cd-red-ink);   border-color: var(--cd-red-line); }
+  .cd .cd-group-head.cd-gh-warn   { background: var(--cd-ochre-soft); color: var(--cd-ochre-ink); border-color: var(--cd-ochre-line); }
+  .cd .cd-group-head.cd-gh-info   { background: var(--cd-sky-soft);   color: var(--cd-sky-ink);   border-color: var(--cd-sky-line); }
+  .cd .cd-group-head.cd-gh-ok     { background: var(--cd-olive-soft); color: var(--cd-olive-ink); border-color: var(--cd-olive-line); }
+  .cd .cd-group-head .cd-count { color: inherit; opacity: .75; }
+  .cd .cd-group ul > li + li { border-top: 1px solid var(--cd-sunken); }
+  .cd .cd-row { padding: 12px 16px; transition: background-color .15s; }
+  .cd .cd-row:hover { background: var(--cd-bg); }
+  .cd .cd-empty { text-align: center; padding: 40px 16px; border: 1px dashed var(--cd-line-strong); border-radius: 14px; color: var(--cd-ink-2); }
+  .cd .cd-empty svg { color: var(--cd-ink-4); }
+
+  /* Selector de vista (segmentado) */
+  .cd .cd-seg { display: inline-flex; gap: 2px; background: var(--cd-sunken); border-radius: 10px; padding: 3px; }
+  .cd .cd-seg-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 8px; color: var(--cd-ink-2); white-space: nowrap; transition: color .15s, background-color .15s; }
+  .cd .cd-seg-btn:hover { color: var(--cd-ink); }
+  .cd .cd-seg-btn.is-on { background: var(--cd-surface); color: var(--cd-ink); box-shadow: 0 1px 2px rgba(20,20,19,.08), 0 0 0 1px rgba(20,20,19,.04); }
+  @media (max-width: 640px) {
+    .cd .cd-seg { display: flex; align-self: stretch; max-width: 100%; overflow-x: auto; }
+    .cd .cd-seg-btn { flex: 1 0 auto; justify-content: center; gap: 4px; padding: 6px 8px; font-size: 12px; }
+  }
+
+  /* Tablero */
+  .cd .cd-col { background: var(--cd-sunken); border: 1px solid transparent; border-radius: 14px; transition: border-color .15s, box-shadow .15s; }
+  .cd .cd-col.is-over { border-color: var(--cd-clay); box-shadow: 0 0 0 3px rgba(217,119,87,.18); }
+  .cd .cd-col-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
+  .cd .cd-task { background: var(--cd-surface); border: 1px solid var(--cd-line); border-radius: 10px; padding: 10px 12px; box-shadow: 0 1px 2px rgba(20,20,19,.04); transition: border-color .15s, box-shadow .15s, opacity .15s; }
+  .cd .cd-task[draggable="true"] { cursor: grab; }
+  .cd .cd-task[draggable="true"]:active { cursor: grabbing; }
+  .cd .cd-task:hover { border-color: var(--cd-line-strong); box-shadow: 0 2px 6px rgba(20,20,19,.06); }
+  .cd .cd-task.is-overdue { border-color: var(--cd-red-line); }
+  .cd .cd-task.is-dragging { opacity: .4; }
+  .cd .cd-task.is-editing { border-color: var(--cd-clay); }
+  .cd .cd-task-actions { display: flex; align-items: center; gap: 2px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--cd-sunken); }
+  .cd .cd-text { font-size: 14px; line-height: 1.4; color: var(--cd-ink); }
+  .cd .cd-text.is-done { color: var(--cd-ink-3); text-decoration: line-through; }
+
+  /* Botones de icono */
+  .cd .cd-icon-btn { padding: 4px; border-radius: 6px; color: var(--cd-ink-4); transition: color .15s, background-color .15s; }
+  .cd .cd-icon-btn:hover:not(:disabled) { color: var(--cd-ink); background: var(--cd-sunken); }
+  .cd .cd-icon-btn:disabled { opacity: .3; cursor: default; }
+  .cd .cd-icon-btn.is-ok:hover     { color: var(--cd-olive-ink);   background: var(--cd-olive-soft); }
+  .cd .cd-icon-btn.is-danger:hover { color: var(--cd-red);         background: var(--cd-red-soft); }
+  .cd .cd-icon-btn.is-accent:hover, .cd .cd-icon-btn.is-on { color: var(--cd-clay-strong); background: var(--cd-clay-soft); }
+
+  /* Insignias */
+  .cd .cd-b-neutral { background: var(--cd-sunken);     color: var(--cd-ink-2);     border-color: var(--cd-line); }
+  .cd .cd-b-outline { background: transparent;          color: var(--cd-ink-2);     border-color: var(--cd-line-strong); }
+  .cd .cd-b-muted   { background: transparent;          color: var(--cd-ink-3);     border-color: var(--cd-line); }
+  .cd .cd-b-danger  { background: var(--cd-red-soft);   color: var(--cd-red-ink);   border-color: var(--cd-red-line); }
+  .cd .cd-b-warn    { background: var(--cd-ochre-soft); color: var(--cd-ochre-ink); border-color: var(--cd-ochre-line); }
+  .cd .cd-pill { background: var(--st-bg); color: var(--st-fg); border: 1px solid var(--st-line); border-radius: 999px; font-size: 12px; font-weight: 500; padding: 4px 8px; cursor: pointer; }
+  .cd .cd-pill:focus { outline: none; box-shadow: 0 0 0 3px rgba(217,119,87,.3); }
+
+  /* Ganchos de componentes compartidos (ganan a las utilidades de Tailwind por especificidad) */
+  .cd .cd-input { background: var(--cd-surface); border-color: var(--cd-line-strong); color: var(--cd-ink); border-radius: 8px; }
+  .cd .cd-input::placeholder { color: var(--cd-ink-3); }
+  .cd .cd-input:focus { border-color: var(--cd-clay); --tw-ring-color: rgba(217,119,87,.3); }
+  .cd .cd-btn-primary { background: var(--cd-clay-strong); color: #fff; border-radius: 8px; }
+  .cd .cd-btn-primary:hover { background: var(--cd-clay-deep); }
+  .cd .cd-btn-primary:disabled { background: var(--cd-clay-strong); }
+  .cd .cd-btn-ghost { color: var(--cd-ink-2); border-radius: 8px; }
+  .cd .cd-btn-ghost:hover { background: var(--cd-sunken); color: var(--cd-ink); }
+  .cd .cd-form-compact { background: var(--cd-sunken); border-color: var(--cd-line); border-radius: 10px; }
+  .cd .cd-chip { background: transparent; color: var(--cd-ink-2); border-color: var(--cd-line-strong); }
+  .cd .cd-chip:not(.cd-chip-on):not(.cd-chip-accent):hover { border-color: var(--cd-ink-3); color: var(--cd-ink); }
+  .cd .cd-chip.cd-chip-on { background: var(--cd-ink); color: var(--cd-bg); border-color: var(--cd-ink); }
+  .cd .cd-chip.cd-chip-accent { background: var(--cd-clay-strong); color: #fff; border-color: var(--cd-clay-strong); }
+  .cd .cd-ref-hu { color: var(--cd-clay-deep); background: var(--cd-clay-soft); border-color: var(--cd-clay-line); }
+  .cd .cd-ref-hu:hover { background: #F0D5C9; }
+  .cd .cd-ref-hd { color: var(--cd-ink-2); background: var(--cd-sunken); border-color: var(--cd-line); }
 </style>
 </head>
 <body class="bg-slate-100">
@@ -168,11 +309,12 @@ const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto
    { id, text, resp, due ("AAAA-MM-DD" | null), estado, temaId (id del tema de la agenda | null), ts }
    Los responsables disponibles viven en data.miembros (lista de nombres). */
 const TASK_STATES = {
-  todo:      { label: "Por hacer",  color: "bg-slate-100 text-slate-600 border-slate-200",   head: "bg-slate-100 text-slate-700",   dot: "text-slate-400",   icon: Circle },
-  proceso:   { label: "En proceso", color: "bg-sky-100 text-sky-700 border-sky-200",         head: "bg-sky-100 text-sky-800",       dot: "text-sky-500",     icon: RefreshCw },
-  bloqueado: { label: "Bloqueado",  color: "bg-amber-100 text-amber-800 border-amber-200",   head: "bg-amber-100 text-amber-800",   dot: "text-amber-500",   icon: Ban },
-  hecho:     { label: "Hecho",      color: "bg-emerald-100 text-emerald-700 border-emerald-200", head: "bg-emerald-100 text-emerald-800", dot: "text-emerald-500", icon: CheckCircle2 },
+  todo:      { label: "Por hacer",  color: "bg-slate-100 text-slate-600 border-slate-200",   head: "bg-slate-100 text-slate-700",   dot: "text-slate-400",   icon: Circle,       cd: "cd-st-todo" },
+  proceso:   { label: "En proceso", color: "bg-sky-100 text-sky-700 border-sky-200",         head: "bg-sky-100 text-sky-800",       dot: "text-sky-500",     icon: RefreshCw,    cd: "cd-st-proceso" },
+  bloqueado: { label: "Bloqueado",  color: "bg-amber-100 text-amber-800 border-amber-200",   head: "bg-amber-100 text-amber-800",   dot: "text-amber-500",   icon: Ban,          cd: "cd-st-bloqueado" },
+  hecho:     { label: "Hecho",      color: "bg-emerald-100 text-emerald-700 border-emerald-200", head: "bg-emerald-100 text-emerald-800", dot: "text-emerald-500", icon: CheckCircle2, cd: "cd-st-hecho" },
 };
+/* "cd" es la clase del estado en el tema Claude Design del Planner (ver <style>, bloque .cd) */
 const TASK_ORDER = ["todo", "proceso", "bloqueado", "hecho"];
 const SEED_MIEMBROS = ["Ximena", "Fabián Núñez", "Michael Lozano", "Didier"];
 
@@ -700,7 +842,8 @@ function FilterChip({ active, onClick, children, subtle }) {
   const base = "text-xs px-3 py-1 rounded-full border transition-colors cursor-pointer";
   const on = subtle ? "bg-slate-700 text-white border-slate-700" : "bg-blue-600 text-white border-blue-600";
   const off = "bg-white text-slate-600 border-slate-300 hover:border-slate-400";
-  return <button onClick={onClick} className={`${base} ${active ? on : off}`}>{children}</button>;
+  const cd = `cd-chip ${active ? (subtle ? "cd-chip-on" : "cd-chip-accent") : ""}`; // solo actúa dentro de .cd (Planner)
+  return <button onClick={onClick} className={`${base} ${active ? on : off} ${cd}`}>{children}</button>;
 }
 
 /* ---------- NUEVOS TEMAS VIEW ---------- */
@@ -967,10 +1110,11 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
     return Object.entries(g);
   }, [agenda, temaId]);
 
-  const inputCls = "px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400";
+  // Las clases cd-* solo tienen efecto dentro de .cd (Planner con Claude Design)
+  const inputCls = "px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 cd-input";
 
   return (
-    <div className={compact ? "mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2" : "space-y-3"}>
+    <div className={compact ? "mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2 cd-form-compact" : "space-y-3"}>
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -1011,12 +1155,12 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
         <button
           onClick={submit}
           disabled={!ready}
-          className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed cd-btn-primary"
         >
           {editing ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {submitLabel || (editing ? "Guardar" : "Agregar")}
         </button>
         {onCancel && (
-          <button onClick={onCancel} className="flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg text-slate-500 hover:bg-slate-100">
+          <button onClick={onCancel} className="flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg text-slate-500 hover:bg-slate-100 cd-btn-ghost">
             <X className="w-4 h-4" /> Cancelar
           </button>
         )}
@@ -1038,11 +1182,11 @@ function RefText({ text, className }) {
     if (kind === "HU") {
       parts.push(
         <a key={m.index} href={AZDO_WI_URL + m[2]} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()}
-          className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.5 rounded hover:bg-blue-100 whitespace-nowrap"
+          className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.5 rounded hover:bg-blue-100 whitespace-nowrap cd-ref-hu"
           title={`Abrir HU ${m[2]} en Azure DevOps`}>HU {m[2]}</a>
       );
     } else {
-      parts.push(<span key={m.index} className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-1 py-0.5 rounded whitespace-nowrap">HD {m[2]}</span>);
+      parts.push(<span key={m.index} className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-1 py-0.5 rounded whitespace-nowrap cd-ref-hd">HD {m[2]}</span>);
     }
     last = m.index + m[0].length;
   }
@@ -1073,16 +1217,16 @@ function TaskMeta({ t, tema, customCats, hideTema }) {
         const C = resolveCat(tema.cat, customCats);
         const CI = C.icon;
         return (
-          <Badge className={C.color}>
-            <CI className="w-3 h-3" />
+          <Badge className="cd-b-neutral max-w-full min-w-0">
+            <CI className="w-3 h-3 shrink-0" />
             <span className="font-mono">{String(tema.id).padStart(2, "0")}</span>
-            <span className="truncate max-w-[180px]" title={tema.text}>{tema.text}</span>
+            <span className="truncate max-w-[180px] min-w-0" title={tema.text}>{tema.text}</span>
           </Badge>
         );
       })()}
-      {t.resp && <Badge className="bg-slate-100 text-slate-600 border-slate-200"><Users className="w-3 h-3" />{t.resp}</Badge>}
+      {t.resp && <Badge className="cd-b-outline"><Users className="w-3 h-3" />{t.resp}</Badge>}
       {t.due && (
-        <Badge className={overdue ? "bg-rose-100 text-rose-700 border-rose-200" : today ? "bg-amber-100 text-amber-800 border-amber-200" : t.estado === "hecho" ? "bg-slate-100 text-slate-400 border-slate-200" : "bg-indigo-50 text-indigo-700 border-indigo-200"}>
+        <Badge className={overdue ? "cd-b-danger" : today ? "cd-b-warn" : t.estado === "hecho" ? "cd-b-muted" : "cd-b-outline"}>
           {overdue ? <AlertCircle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
           {overdue ? `Vencida · ${fmtDue(t.due)}` : today ? "Vence hoy" : fmtDue(t.due)}
         </Badge>
@@ -1146,42 +1290,52 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
   });
 
   const ModeBtn = ({ k, icon: I, children }) => (
-    <button onClick={() => setMode(k)} className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md ${mode === k ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+    <button onClick={() => setMode(k)} className={`cd-seg-btn ${mode === k ? "is-on" : ""}`}>
       <I className="w-3.5 h-3.5" /> {children}
     </button>
   );
 
+  /* Toda la vista va dentro de .cd: el tema Claude Design definido en <style> */
   return (
-    <div className="space-y-5">
+    <div className="cd space-y-5">
+      {/* Encabezado */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <h2 className="cd-title">Planner</h2>
+          <p className="cd-sub">Tareas del comité · {comite.nombre}</p>
+        </div>
+        {tareas.length > 0 && <p className="cd-hint">{counts.hecho} de {tareas.length} tarea(s) hechas</p>}
+      </div>
+
       {/* Resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {TASK_ORDER.map((k) => {
           const S = TASK_STATES[k]; const SI = S.icon;
           return (
-            <div key={k} className={`rounded-xl border px-3 py-2 ${S.color}`}>
-              <div className="flex items-center gap-1.5 text-xs font-medium"><SI className="w-3.5 h-3.5" />{S.label}</div>
-              <div className="text-xl font-bold mt-0.5">{counts[k]}</div>
+            <div key={k} className={`cd-stat ${S.cd}`}>
+              <div className="cd-stat-label"><SI className="w-3.5 h-3.5 cd-st-icon" />{S.label}</div>
+              <div className="cd-stat-num">{counts[k]}</div>
             </div>
           );
         })}
-        <button onClick={() => setMode("week")} className={`text-left rounded-xl border px-3 py-2 transition-colors ${vencidas ? "bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200/70" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`} title="Ver la semana">
-          <div className="flex items-center gap-1.5 text-xs font-medium"><AlertCircle className="w-3.5 h-3.5" />Vencidas</div>
-          <div className="text-xl font-bold mt-0.5">{vencidas}</div>
+        <button onClick={() => setMode("week")} className={`cd-stat ${vencidas ? "is-alert" : ""}`} title="Ver la semana">
+          <div className="cd-stat-label"><AlertCircle className="w-3.5 h-3.5" />Vencidas</div>
+          <div className="cd-stat-num">{vencidas}</div>
         </button>
       </div>
 
       {/* Nueva tarea */}
-      <div className="border border-slate-200 rounded-xl bg-white p-4">
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 mb-3">
-          <PlusCircle className="w-4 h-4 text-blue-600" /> Nueva tarea en {comite.nombre}
+      <div className="cd-card p-4">
+        <p className="flex items-center gap-2 cd-h3 mb-3">
+          <PlusCircle className="w-4 h-4 cd-accent" /> Nueva tarea en {comite.nombre}
         </p>
         <TaskForm {...formProps} onSubmit={onAdd} />
-        <p className="text-xs text-slate-400 mt-2">Tip: también puedes crear tareas desde cada tema en la pestaña Agenda. Enter para agregar rápido.</p>
+        <p className="cd-hint mt-2">Tip: también puedes crear tareas desde cada tema en la pestaña Agenda. Enter para agregar rápido.</p>
       </div>
 
       {/* Controles */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div className="flex gap-1 bg-white rounded-lg border border-slate-200 p-1 self-start">
+        <div className="cd-seg self-start">
           <ModeBtn k="board" icon={Kanban}>Tablero</ModeBtn>
           <ModeBtn k="list" icon={LayoutList}>Por responsable</ModeBtn>
           <ModeBtn k="week" icon={Calendar}>Esta semana</ModeBtn>
@@ -1196,13 +1350,13 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
         </div>
         <div className="flex items-center gap-3 lg:ml-auto">
           {mode !== "board" && (
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none whitespace-nowrap">
+            <label className="flex items-center gap-1.5 cd-hint cursor-pointer select-none whitespace-nowrap">
               <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="rounded" /> Mostrar hechas
             </label>
           )}
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap" title="Se recuerda solo en este navegador">
-            <User className="w-3.5 h-3.5 text-slate-400" /> Yo soy
-            <select value={me} onChange={(e) => setMe(e.target.value)} className="text-xs rounded-md border border-slate-300 bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="flex items-center gap-1.5 cd-hint whitespace-nowrap" title="Se recuerda solo en este navegador">
+            <User className="w-3.5 h-3.5" /> Yo soy
+            <select value={me} onChange={(e) => setMe(e.target.value)} className="text-xs border px-2 py-1 focus:outline-none focus:ring-2 cd-input">
               <option value="">—</option>
               {miembros.map((m) => (<option key={m} value={m}>{m}</option>))}
             </select>
@@ -1211,10 +1365,10 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
       </div>
 
       {tareas.length === 0 && (
-        <div className="text-center py-10 border border-dashed border-slate-300 rounded-xl">
-          <Kanban className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">Aún no hay tareas en {comite.nombre}.</p>
-          <p className="text-xs text-slate-400 mt-1">Crea la primera arriba o desde un tema de la agenda.</p>
+        <div className="cd-empty">
+          <Kanban className="w-8 h-8 mx-auto mb-2" />
+          <p className="cd-h3">Aún no hay tareas en {comite.nombre}</p>
+          <p className="cd-hint mt-1">Crea la primera arriba o desde un tema de la agenda.</p>
         </div>
       )}
 
@@ -1231,15 +1385,15 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
                 onDragOver={(e) => { e.preventDefault(); if (overCol !== k) setOverCol(k); }}
                 onDragLeave={() => setOverCol((c) => (c === k ? null : c))}
                 onDrop={() => drop(k)}
-                className={`rounded-xl border bg-white overflow-hidden transition-colors ${isOver ? "border-blue-400 ring-2 ring-blue-200" : "border-slate-200"}`}
+                className={`cd-col ${S.cd} ${isOver ? "is-over" : ""}`}
               >
-                <div className={`flex items-center gap-2 px-3 py-2 border-b border-slate-200 ${S.head}`}>
-                  <SI className="w-4 h-4" />
-                  <h3 className="text-sm font-semibold">{S.label}</h3>
-                  <span className="ml-auto text-xs font-medium opacity-70">{items.length}</span>
+                <div className="cd-col-head">
+                  <SI className="w-4 h-4 cd-st-icon" />
+                  <h3 className="cd-h3">{S.label}</h3>
+                  <span className="ml-auto cd-count">{items.length}</span>
                 </div>
-                <div className="p-2 space-y-2 min-h-[80px]">
-                  {items.length === 0 && <p className="text-xs text-slate-400 text-center py-4">{isOver ? "Suelta aquí" : "Sin tareas"}</p>}
+                <div className="px-2 pb-2 space-y-2 min-h-[80px]">
+                  {items.length === 0 && <p className="cd-hint text-center py-4">{isOver ? "Suelta aquí" : "Sin tareas"}</p>}
                   {items.map((t) => (
                     <TaskCard key={t.id} {...rowProps(t)}
                       dragging={dragId === t.id}
@@ -1260,7 +1414,7 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
         list.forEach((t) => { const key = t.resp || "__none__"; (groups[key] = groups[key] || []).push(t); });
         const order = [...miembros.filter((m) => groups[m]), ...Object.keys(groups).filter((k) => k !== "__none__" && !miembros.includes(k))];
         if (groups.__none__) order.push("__none__");
-        if (order.length === 0) return <p className="text-sm text-slate-500 py-8 text-center">No hay tareas que coincidan con el filtro.</p>;
+        if (order.length === 0) return <p className="cd-sub py-8 text-center">No hay tareas que coincidan con el filtro.</p>;
         return (
           <div className="space-y-4">
             {order.map((key) => {
@@ -1292,18 +1446,18 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
           g.items.push(t);
         };
         conFecha.forEach((t) => {
-          if (t.estado !== "hecho" && t.due < today) push("venc", "Vencidas", "bg-rose-50 text-rose-800 border-rose-200", t);
-          else if (t.due === today) push("hoy", `Hoy · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-amber-50 text-amber-800 border-amber-200", t);
-          else if (t.due === tomorrow) push(t.due, `Mañana · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-indigo-50 text-indigo-800 border-indigo-200", t);
-          else if (t.due < today) push("hechas", "Hechas con fecha pasada", "bg-emerald-50 text-emerald-800 border-emerald-200", t);
-          else push(t.due, `${weekdayOf(t.due)} ${fmtDue(t.due)}`, "bg-slate-50 text-slate-700 border-slate-200", t);
+          if (t.estado !== "hecho" && t.due < today) push("venc", "Vencidas", "cd-gh-danger", t);
+          else if (t.due === today) push("hoy", `Hoy · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "cd-gh-warn", t);
+          else if (t.due === tomorrow) push(t.due, `Mañana · ${weekdayOf(t.due)} ${fmtDue(t.due)}`, "cd-gh-info", t);
+          else if (t.due < today) push("hechas", "Hechas con fecha pasada", "cd-gh-ok", t);
+          else push(t.due, `${weekdayOf(t.due)} ${fmtDue(t.due)}`, "", t);
         });
         return (
           <div className="space-y-4">
             {groups.length === 0 && (
-              <div className="text-center py-8 border border-dashed border-slate-300 rounded-xl">
-                <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-500">Nada vence en los próximos 7 días{respFilter !== "all" ? " con este filtro" : ""}.</p>
+              <div className="cd-empty">
+                <Calendar className="w-8 h-8 mx-auto mb-2" />
+                <p className="cd-h3">Nada vence en los próximos 7 días{respFilter !== "all" ? " con este filtro" : ""}</p>
               </div>
             )}
             {groups.map((g) => (
@@ -1312,7 +1466,7 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
               </TaskGroup>
             ))}
             {(sinFecha.length > 0 || masTarde > 0) && (
-              <p className="text-xs text-slate-400 text-center">
+              <p className="cd-hint text-center">
                 {sinFecha.length > 0 && `${sinFecha.length} pendiente(s) sin fecha límite`}
                 {sinFecha.length > 0 && masTarde > 0 && " · "}
                 {masTarde > 0 && `${masTarde} con fecha posterior a esta semana`}
@@ -1328,13 +1482,13 @@ function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, 
 
 function TaskGroup({ icon: Icon, title, subtitle, headCls, children }) {
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-      <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${headCls || "bg-slate-50 text-slate-800 border-slate-200"}`}>
+    <div className="cd-group">
+      <div className={`cd-group-head ${headCls || ""}`}>
         <Icon className="w-4 h-4 opacity-70" />
-        <h3 className="text-sm font-semibold">{title}</h3>
-        <span className="ml-auto text-xs opacity-70">{subtitle}</span>
+        <h3 className="cd-h3 first-letter:uppercase">{title}</h3>
+        <span className="ml-auto cd-count">{subtitle}</span>
       </div>
-      <ul className="divide-y divide-slate-100">{children}</ul>
+      <ul>{children}</ul>
     </div>
   );
 }
@@ -1343,23 +1497,23 @@ function TaskGroup({ icon: Icon, title, subtitle, headCls, children }) {
 function TaskRow({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, onCancelEdit, onEstado, onRemove }) {
   const S = TASK_STATES[t.estado] || TASK_STATES.todo;
   return (
-    <li className={`px-4 py-3 hover:bg-slate-50 ${t.estado === "hecho" ? "bg-emerald-50/40" : ""}`}>
+    <li className="cd-row">
       <div className="flex gap-3">
         <select
           value={t.estado}
           onChange={(e) => onEstado(e.target.value)}
-          className={`shrink-0 self-start text-xs font-medium rounded-full border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${S.color}`}
+          className={`shrink-0 self-start cd-pill ${S.cd}`}
           title="Cambiar estado"
         >
           {TASK_ORDER.map((k) => (<option key={k} value={k}>{TASK_STATES[k].label}</option>))}
         </select>
         <div className="min-w-0 flex-1">
-          <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}><RefText text={t.text} /></p>
+          <p className={`cd-text ${t.estado === "hecho" ? "is-done" : ""}`}><RefText text={t.text} /></p>
           <div className="mt-1.5"><TaskMeta t={t} tema={tema} customCats={customCats} /></div>
         </div>
-        <div className="flex gap-1 self-start mt-0.5 shrink-0">
-          <button onClick={onEdit} className={`transition-colors ${editing ? "text-blue-600" : "text-slate-300 hover:text-blue-600"}`} title="Editar tarea"><Pencil className="w-4 h-4" /></button>
-          <button onClick={onRemove} className="text-slate-300 hover:text-rose-500 transition-colors" title="Eliminar tarea"><Trash2 className="w-4 h-4" /></button>
+        <div className="flex gap-0.5 self-start shrink-0">
+          <button onClick={onEdit} className={`cd-icon-btn is-accent ${editing ? "is-on" : ""}`} title="Editar tarea"><Pencil className="w-4 h-4" /></button>
+          <button onClick={onRemove} className="cd-icon-btn is-danger" title="Eliminar tarea"><Trash2 className="w-4 h-4" /></button>
         </div>
       </div>
       {editing && <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />}
@@ -1372,7 +1526,7 @@ function TaskCard({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit,
   const overdue = isOverdue(t);
   if (editing) {
     return (
-      <div className="rounded-lg border border-blue-300 bg-white p-2.5 shadow-sm">
+      <div className="cd-task is-editing">
         <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />
       </div>
     );
@@ -1382,26 +1536,26 @@ function TaskCard({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit,
       draggable
       onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(); }}
       onDragEnd={onDragEnd}
-      className={`group rounded-lg border bg-white p-2.5 shadow-sm cursor-grab active:cursor-grabbing transition-opacity ${dragging ? "opacity-40" : ""} ${overdue ? "border-rose-300" : "border-slate-200"}`}
+      className={`cd-task ${dragging ? "is-dragging" : ""} ${overdue ? "is-overdue" : ""}`}
     >
-      <p className={`text-sm leading-snug ${t.estado === "hecho" ? "text-slate-400 line-through" : "text-slate-700"}`}><RefText text={t.text} /></p>
+      <p className={`cd-text ${t.estado === "hecho" ? "is-done" : ""}`}><RefText text={t.text} /></p>
       <div className="mt-2"><TaskMeta t={t} tema={tema} customCats={customCats} /></div>
-      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
-        <button onClick={() => onMove(-1)} disabled={i <= 0} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent" title={i > 0 ? `Mover a ${TASK_STATES[TASK_ORDER[i - 1]].label}` : ""}>
+      <div className="cd-task-actions">
+        <button onClick={() => onMove(-1)} disabled={i <= 0} className="cd-icon-btn" title={i > 0 ? `Mover a ${TASK_STATES[TASK_ORDER[i - 1]].label}` : ""}>
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <button onClick={() => onMove(1)} disabled={i >= TASK_ORDER.length - 1} className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent" title={i < TASK_ORDER.length - 1 ? `Mover a ${TASK_STATES[TASK_ORDER[i + 1]].label}` : ""}>
+        <button onClick={() => onMove(1)} disabled={i >= TASK_ORDER.length - 1} className="cd-icon-btn" title={i < TASK_ORDER.length - 1 ? `Mover a ${TASK_STATES[TASK_ORDER[i + 1]].label}` : ""}>
           <ArrowRight className="w-4 h-4" />
         </button>
         {t.estado !== "hecho" && (
-          <button onClick={() => onMove(TASK_ORDER.length - 1 - i)} className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50" title="Marcar como hecha">
+          <button onClick={() => onMove(TASK_ORDER.length - 1 - i)} className="cd-icon-btn is-ok" title="Marcar como hecha">
             <CheckCircle2 className="w-4 h-4" />
           </button>
         )}
-        <button onClick={onEdit} className="ml-auto p-1 rounded text-slate-300 hover:text-blue-600 hover:bg-blue-50" title="Editar tarea">
+        <button onClick={onEdit} className="ml-auto cd-icon-btn is-accent" title="Editar tarea">
           <Pencil className="w-4 h-4" />
         </button>
-        <button onClick={onRemove} className="p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-rose-50" title="Eliminar tarea">
+        <button onClick={onRemove} className="cd-icon-btn is-danger" title="Eliminar tarea">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
