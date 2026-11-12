@@ -16,7 +16,6 @@
 <!-- Firebase (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <!-- Serif de los títulos del Planner (Claude Design). Si no carga, se usa Georgia/Palatino. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -193,23 +192,11 @@ const FS_DOC = "main";
 
 const FIREBASE_READY = firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("PEGA_");
 
-/* ---------- ACCESO (Google) ----------
-   AUTH_REQUIRED = false → la app funciona como hasta ahora (cualquiera con el enlace) y el
-                          inicio de sesión es opcional: identifica a la persona en el Planner.
-   AUTH_REQUIRED = true  → se exige iniciar sesión con Google antes de cargar los datos.
-   Antes de ponerlo en true: Consola Firebase → Authentication → Sign-in method → Google →
-   Habilitar, y agregar el dominio de GitHub Pages en "Dominios autorizados". Luego cambiar
-   las reglas de Firestore para exigir request.auth (ver README). */
-const AUTH_REQUIRED = false;
-const ALLOWED_EMAIL_DOMAIN = "sinco.co"; // null para aceptar cualquier cuenta de Google
-
 let db = null;
-let auth = null;
 if (FIREBASE_READY) {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    auth = firebase.auth ? firebase.auth() : null;
   } catch (e) {
     console.error("Error inicializando Firebase:", e);
   }
@@ -520,64 +507,13 @@ function Badge({ children, className }) {
    - Sin configuración o sin conexión → modo local con los datos
      semilla y un aviso (los cambios no se guardan).
    ================================================================ */
-/* Sesión de Google (opcional u obligatoria según AUTH_REQUIRED).
-   user: undefined mientras se resuelve, null sin sesión, objeto con sesión. */
-function useAuth() {
-  const [user, setUser] = useState(auth ? undefined : null);
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!auth) return;
-    const unsub = auth.onAuthStateChanged((u) => {
-      if (u && ALLOWED_EMAIL_DOMAIN && !(u.email || "").toLowerCase().endsWith("@" + ALLOWED_EMAIL_DOMAIN)) {
-        setError(`Usa una cuenta @${ALLOWED_EMAIL_DOMAIN} (entraste con ${u.email}).`);
-        auth.signOut();
-        return;
-      }
-      setUser(u || null);
-    });
-    return () => unsub();
-  }, []);
-
-  const signIn = async () => {
-    if (!auth) return;
-    setError(null);
-    setBusy(true);
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      if (ALLOWED_EMAIL_DOMAIN) provider.setCustomParameters({ hd: ALLOWED_EMAIL_DOMAIN });
-      await auth.signInWithPopup(provider);
-    } catch (e) {
-      console.error("Error iniciando sesión:", e);
-      const code = e && e.code || "";
-      if (code === "auth/operation-not-allowed" || code === "auth/configuration-not-found") {
-        setError("El inicio de sesión con Google no está habilitado en la consola de Firebase (Authentication → Sign-in method → Google).");
-      } else if (code === "auth/unauthorized-domain") {
-        setError("Este dominio no está autorizado en Firebase Authentication → Settings → Dominios autorizados.");
-      } else if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-        setError(null);
-      } else {
-        setError("No se pudo iniciar sesión: " + (e && e.message || code || "error desconocido"));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOut = () => { if (auth) auth.signOut().catch((e) => console.error(e)); };
-
-  return { user, signIn, signOut, error, busy, available: !!auth };
-}
-
-function useComiteData(enabled = true) {
+function useComiteData() {
   const [data, setData] = useState(null);
   // status: "connecting" | "online" | "local" | "error"
   const [status, setStatus] = useState(FIREBASE_READY && db ? "connecting" : "local");
   const seededRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
     if (!FIREBASE_READY || !db) {
       setData(buildSeed());
       return;
@@ -610,7 +546,7 @@ function useComiteData(enabled = true) {
       }
     );
     return () => unsub();
-  }, [enabled]);
+  }, []);
 
   const save = async (next) => {
     setData(next); // actualización optimista: la UI responde al instante
@@ -1236,14 +1172,10 @@ function TaskMeta({ t, tema, customCats, hideTema }) {
 }
 
 /* ---------- PLANNER VIEW ---------- */
-function PlannerView({ comite, customCats, miembros, authName, onAdd, onUpdate, onRemove }) {
-  const [me, setMeState] = useState(() => loadMe() || authName || "");
+function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }) {
+  const [me, setMeState] = useState(loadMe);
   const [mode, setMode] = useState("board"); // board | list | week
-  const [respFilter, setRespFilter] = useState(() => (loadMe() || authName ? "__me__" : "all"));
-  // Si la sesión de Google coincide con un miembro y no hay nombre guardado, se usa esa identidad
-  useEffect(() => {
-    if (!me && authName) { setMeState(authName); setRespFilter("__me__"); }
-  }, [authName]);
+  const [respFilter, setRespFilter] = useState(() => (loadMe() ? "__me__" : "all"));
   const [showDone, setShowDone] = useState(false);
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
@@ -1586,90 +1518,9 @@ function SetupBanner({ status }) {
   );
 }
 
-/* ---------- ACCESO: PANTALLA Y CHIP DE USUARIO ---------- */
-function GoogleLogo({ className = "" }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-    </svg>
-  );
-}
-
-function LoginScreen({ auth }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-7 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <img src="assets/facturacion-electronica.svg" alt="" className="w-12 h-12" />
-          <img src="assets/recepcion-electronica.svg" alt="" className="w-12 h-12" />
-        </div>
-        <h1 className="text-lg font-bold text-slate-800">Comité de Facturación Electrónica</h1>
-        <p className="text-sm text-slate-500 mt-1 mb-6">
-          Inicia sesión con tu cuenta{ALLOWED_EMAIL_DOMAIN ? <> <strong>@{ALLOWED_EMAIL_DOMAIN}</strong></> : " de Google"} para ver y editar la agenda y el planner.
-        </p>
-        <button
-          onClick={auth.signIn}
-          disabled={auth.busy}
-          className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 disabled:opacity-50"
-        >
-          <GoogleLogo className="w-5 h-5" /> {auth.busy ? "Abriendo Google…" : "Continuar con Google"}
-        </button>
-        {auth.error && <p className="mt-4 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-left">{auth.error}</p>}
-      </div>
-    </div>
-  );
-}
-
-function AuthChip({ auth }) {
-  if (!auth.available) return null;
-  if (auth.user) {
-    const u = auth.user;
-    return (
-      <div className="ml-auto flex items-center gap-2 bg-white/10 border border-white/20 rounded-full pl-1 pr-2 py-1" title={u.email || ""}>
-        {u.photoURL
-          ? <img src={u.photoURL} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-full" />
-          : <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">{(u.displayName || u.email || "?").charAt(0).toUpperCase()}</span>}
-        <span className="text-xs font-medium max-w-[120px] truncate hidden sm:inline">{u.displayName || u.email}</span>
-        <button onClick={auth.signOut} className="text-xs text-blue-200 hover:text-white underline-offset-2 hover:underline">Salir</button>
-      </div>
-    );
-  }
-  return (
-    <div className="ml-auto flex flex-col items-end gap-1">
-      <button
-        onClick={auth.signIn}
-        disabled={auth.busy}
-        className="flex items-center gap-2 text-xs font-medium bg-white text-slate-700 hover:bg-slate-100 rounded-full pl-2 pr-3 py-1.5 disabled:opacity-50"
-        title="Opcional: identifica tus tareas en el Planner"
-      >
-        <GoogleLogo className="w-4 h-4" /> <span className="hidden sm:inline">Iniciar sesión</span>
-      </button>
-      {auth.error && <span className="text-[11px] text-rose-200 max-w-[260px] text-right">{auth.error}</span>}
-    </div>
-  );
-}
-
-/* Nombre del miembro que corresponde a la sesión de Google (coincidencia por nombre) */
-function matchMember(user, miembros) {
-  if (!user) return "";
-  const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-  const full = norm(user.displayName);
-  const first = full.split(/\s+/)[0];
-  const exact = miembros.find((m) => norm(m) === full);
-  if (exact) return exact;
-  const byFirst = miembros.filter((m) => norm(m).split(/\s+/)[0] === first);
-  return byFirst.length === 1 ? byFirst[0] : "";
-}
-
 /* ---------- ROOT ---------- */
 function App() {
-  const authState = useAuth();
-  // Con AUTH_REQUIRED los datos solo se cargan cuando hay sesión; sin él, siempre.
-  const authGate = AUTH_REQUIRED && authState.available;
-  const { data, save, status } = useComiteData(!authGate || !!authState.user);
+  const { data, save, status } = useComiteData();
   const [viewId, setViewId] = useState(null);
   const [tab, setTab] = useState("agenda");
   const [creating, setCreating] = useState(false);
@@ -1684,18 +1535,6 @@ function App() {
   const updateComite = (id, updater) => {
     save({ ...data, comites: data.comites.map((c) => (c.id === id ? updater(c) : c)) });
   };
-
-  if (authGate && authState.user === undefined) {
-    return (
-      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center gap-2 text-sm text-slate-400">
-        <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
-        Verificando sesión…
-      </div>
-    );
-  }
-  if (authGate && !authState.user) {
-    return <LoginScreen auth={authState} />;
-  }
 
   if (!data || !viewId) {
     return (
@@ -1797,7 +1636,6 @@ function App() {
             <img src="assets/facturacion-electronica.svg" alt="Facturación Electrónica" title="Facturación Electrónica" className="w-12 h-12 md:w-14 md:h-14 drop-shadow-lg" />
             <img src="assets/recepcion-electronica.svg" alt="Recepción Electrónica" title="Recepción Electrónica" className="w-12 h-12 md:w-14 md:h-14 drop-shadow-lg" />
             <h1 className="text-2xl md:text-3xl font-bold">Comité Mensual de Facturación Electrónica</h1>
-            <AuthChip auth={authState} />
           </div>
 
           {/* Selector de comité / historial */}
@@ -1875,7 +1713,7 @@ function App() {
       <main className={`${tab === "planner" ? "max-w-6xl" : "max-w-4xl"} mx-auto px-5 py-6`}>
         {tab === "agenda" && <AgendaView comite={comite} customCats={customCats} miembros={miembros} onToggle={toggleAgenda} onToggleProceso={toggleProceso} onTogglePrio={togglePrio} onAddTarea={addTarea} onUpdateTarea={updateTarea} />}
         {tab === "nuevos" && <NuevosView comite={comite} customCats={customCats} onAdd={addNuevo} onRemove={removeNuevo} onToggle={toggleNuevo} onCreateCat={createCat} />}
-        {tab === "planner" && <PlannerView comite={comite} customCats={customCats} miembros={miembros} authName={matchMember(authState.user, miembros)} onAdd={addTarea} onUpdate={updateTarea} onRemove={removeTarea} />}
+        {tab === "planner" && <PlannerView comite={comite} customCats={customCats} miembros={miembros} onAdd={addTarea} onUpdate={updateTarea} onRemove={removeTarea} />}
         {tab === "release" && <ReleaseView comite={comite} />}
       </main>
 

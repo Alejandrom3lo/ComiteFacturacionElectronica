@@ -54,32 +54,12 @@ comite.tareas[]      : { id, text, resp, due: "AAAA-MM-DD" | null,
 
 Los documentos creados antes del Planner no tienen estas listas; la app las trata como vacías y usa los nombres ya presentes en la agenda como miembros iniciales. No hace falta migrar nada.
 
-### Acceso con Google
+### Restringir el acceso (pendiente, requiere la consola de Firebase)
 
-El inicio de sesión con Google ya está implementado en `index.html` y funciona en dos modos, controlados por la constante `AUTH_REQUIRED` al inicio del script:
+Hoy cualquiera con el enlace puede leer y escribir. Para limitarlo al equipo:
 
-- `AUTH_REQUIRED = false` (valor actual): la app sigue abierta a cualquiera con el enlace. El botón "Iniciar sesión" del encabezado es opcional: identifica a la persona y activa automáticamente el filtro "Mis tareas" del Planner cuando su nombre coincide con un miembro.
-- `AUTH_REQUIRED = true`: se exige iniciar sesión con una cuenta del dominio `ALLOWED_EMAIL_DOMAIN` (hoy `sinco.co`) antes de cargar los datos.
+1. En la consola de Firebase: **Authentication → Sign-in method → Google → Habilitar** y agregar el dominio de GitHub Pages en "Dominios autorizados".
+2. Cambiar las reglas de Firestore a `allow read, write: if request.auth != null && request.auth.token.email.matches('.*@sinco[.]co');`.
+3. Agregar en `index.html` el SDK `firebase-auth-compat.js` y un botón de inicio de sesión con `GoogleAuthProvider` antes de suscribirse a Firestore.
 
-Para activar el modo obligatorio, en este orden:
-
-1. Consola de Firebase → **Authentication → Sign-in method → Google → Habilitar**.
-2. **Authentication → Settings → Dominios autorizados**: agregar el dominio de GitHub Pages (`TU_USUARIO.github.io`).
-3. Probar el botón "Iniciar sesión" con `AUTH_REQUIRED = false`. Si Authentication no está habilitado, el botón muestra el error en pantalla sin afectar la app.
-4. Cambiar las reglas de Firestore:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /comitesFE/{doc} {
-      allow read, write: if request.auth != null
-        && request.auth.token.email.matches('.*@sinco[.]co');
-    }
-  }
-}
-```
-
-5. Poner `AUTH_REQUIRED = true` en `index.html` y publicar.
-
-Si las reglas se cambian antes de habilitar Google en la consola, nadie podrá entrar: por eso el orden importa.
+Mientras no se haga el paso 1, no debe cambiarse el código: la app dejaría de cargar para todos.
