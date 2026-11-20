@@ -33,13 +33,16 @@ service cloud.firestore {
 
 ## Planner de tareas
 
-La pestaña **Planner** administra las acciones concretas que salen de cada comité.
+La app tiene dos secciones, que se cambian desde la barra superior:
+
+- **Planner** (`#/planner`, la que abre por defecto): tablero único y continuo de tareas del equipo, a página completa. No depende del mes.
+- **Comité** (`#/comite`): el comité mensual, con Agenda, Nuevos temas y Release.
 
 - **Tareas**: texto, responsable, fecha límite y tema de la agenda asociado (opcional). Estados: Por hacer, En proceso, Bloqueado y Hecho.
 - **Vistas**: Tablero (Kanban con arrastrar y soltar), Por responsable y Esta semana (vencidas, hoy y próximos 7 días).
 - **Desde la agenda**: cada tema tiene un botón "Tarea" para crear tareas ligadas a él; el tema muestra el avance (hechas/total) y la lista de sus tareas.
 - **Regla de cierre**: al completar un tema con tareas abiertas se pide confirmación y, si se acepta, esas tareas pasan a Hecho.
-- **Cierre de mes**: las tareas no hechas se arrastran al comité siguiente y conservan su tema.
+- **Cierre de mes**: las tareas se quedan en el tablero. Las pendientes ligadas a un tema que pasa al comité siguiente siguen ligadas a ese tema; si el tema se completó, quedan sin tema.
 - **Azure DevOps**: si el texto de una tarea o de un tema contiene `HU 12345`, se enlaza al work item en `dev.azure.com/sincosoftsas/FE`. Las referencias `HD` se resaltan sin enlace.
 - **Mis tareas**: el selector "Yo soy" guarda tu nombre solo en el navegador (localStorage) y activa el filtro de tus tareas al abrir el Planner.
 
@@ -47,12 +50,16 @@ La pestaña **Planner** administra las acciones concretas que salen de cada comi
 
 ```
 data.miembros        : ["Ximena", "Fabián Núñez", ...]   // responsables disponibles
-comite.tareas[]      : { id, text, resp, due: "AAAA-MM-DD" | null,
+data.tareas[]        : { id, text, resp, due: "AAAA-MM-DD" | null,
+                         hora: "HH:MM" | null,   // obligatoria si hay fecha límite
                          estado: "todo" | "proceso" | "bloqueado" | "hecho",
-                         temaId: <id del tema de la agenda> | null, ts }
+                         comiteId: <id del comité del tema>,
+                         temaId: <id del tema en la agenda de ese comité> | null, ts }
 ```
 
-Los documentos creados antes del Planner no tienen estas listas; la app las trata como vacías y usa los nombres ya presentes en la agenda como miembros iniciales. No hace falta migrar nada.
+Los documentos creados antes del Planner no tienen estas listas; la app las trata como vacías y usa los nombres ya presentes en la agenda como miembros iniciales.
+
+**Migración desde `comite.tareas`**: antes las tareas se guardaban dentro de cada comité. Mientras el documento no tenga `data.tareas`, la app une las de todos los comités (si una tarea se arrastró entre meses, gana la copia del comité más reciente). La primera vez que alguien crea, edita o mueve una tarea se guarda `data.tareas` y desde ahí es la única fuente; las listas `comite.tareas` antiguas quedan en el documento sin usarse.
 
 ### Restringir el acceso (pendiente, requiere la consola de Firebase)
 

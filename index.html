@@ -26,7 +26,7 @@
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 
   /* ================================================================
-     CLAUDE DESIGN — solo aplica dentro de .cd (pestaña Planner)
+     CLAUDE DESIGN — solo aplica dentro de .cd (página Planner)
      Marfil cálido, líneas finas, títulos en serif y acento arcilla.
      Los componentes compartidos con la Agenda (TaskForm, FilterChip,
      RefText) llevan clases "gancho" cd-* que fuera de .cd no hacen nada.
@@ -58,6 +58,25 @@
     padding: 24px;
   }
   @media (max-width: 640px) { .cd { padding: 16px; border-radius: 14px; } }
+  /* Planner a página completa: sin marco, ocupa todo el ancho y alto */
+  .cd.cd-page { border: 0; border-radius: 0; padding: 0; min-height: calc(100vh - 53px); }
+  .cd.cd-page .cd-page-inner { padding: 28px 32px 48px; }
+  @media (max-width: 640px) { .cd.cd-page .cd-page-inner { padding: 18px 16px 32px; } }
+
+  /* Barra superior: cambia entre Planner y Comité */
+  .app-nav { position: sticky; top: 0; z-index: 30; background: #141413; color: #FAF9F5; }
+  .app-nav-inner { display: flex; align-items: center; gap: 12px; padding: 8px 32px; min-height: 53px; }
+  @media (max-width: 640px) { .app-nav-inner { padding: 8px 16px; } }
+  .app-nav-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; min-width: 0; }
+  .app-nav-brand img { width: 28px; height: 28px; }
+  .app-nav-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 640px) { .app-nav-brand span { display: none; } }
+  .app-nav-links { display: flex; gap: 4px; margin-left: auto; background: rgba(255,255,255,.08); border-radius: 10px; padding: 3px; }
+  .app-nav-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 8px; color: #D1CFC5; text-decoration: none; transition: background .15s, color .15s; }
+  .app-nav-link:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .app-nav-link.is-on { background: #FAF9F5; color: #141413; }
+  .app-nav-link:focus-visible { outline: 2px solid #D97757; outline-offset: 2px; }
+  .app-nav-badge { font-size: 11px; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 999px; background: #D97757; color: #fff; }
   .cd button:focus-visible, .cd a:focus-visible { outline: 2px solid var(--cd-clay); outline-offset: 2px; }
   .cd input[type="checkbox"] { accent-color: var(--cd-clay-strong); }
 
@@ -152,6 +171,38 @@
   .cd .cd-btn-primary:disabled { background: var(--cd-clay-strong); }
   .cd .cd-btn-ghost { color: var(--cd-ink-2); border-radius: 8px; }
   .cd .cd-btn-ghost:hover { background: var(--cd-sunken); color: var(--cd-ink); }
+
+  /* Diálogo de edición de tarea */
+  .cd .cd-modal-back { position: fixed; inset: 0; z-index: 50; background: rgba(20,20,19,.45); display: flex; align-items: center; justify-content: center; padding: 16px; animation: cd-fade .12s ease-out; }
+  .cd .cd-modal { background: var(--cd-surface); border: 1px solid var(--cd-line); border-radius: 16px; width: 100%; max-width: 560px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(20,20,19,.28); animation: cd-pop .14s ease-out; }
+  .cd .cd-modal-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px; border-bottom: 1px solid var(--cd-line); }
+  .cd .cd-modal-title { font-family: var(--cd-serif); font-size: 20px; font-weight: 500; line-height: 1.2; }
+  .cd .cd-modal-body { padding: 16px 20px; overflow-y: auto; display: grid; gap: 16px; }
+  .cd .cd-modal-foot { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--cd-line); background: var(--cd-bg); border-radius: 0 0 16px 16px; }
+  .cd .cd-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--cd-ink-2); margin-bottom: 6px; }
+  .cd .cd-field { width: 100%; padding: 9px 12px; font-size: 14px; border: 1px solid var(--cd-line-strong); border-radius: 8px; background: var(--cd-surface); color: var(--cd-ink); min-width: 0; }
+  .cd .cd-field:focus { outline: none; border-color: var(--cd-clay); box-shadow: 0 0 0 3px rgba(217,119,87,.25); }
+  .cd .cd-field.is-invalid { border-color: var(--cd-red); box-shadow: 0 0 0 3px rgba(191,77,67,.18); }
+  .cd .cd-error { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--cd-red-ink); }
+  .cd textarea.cd-field { resize: vertical; min-height: 76px; line-height: 1.45; }
+  .cd .cd-state-opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .cd .cd-state-opt { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; font-size: 13px; font-weight: 500; border: 1px solid var(--cd-line-strong); border-radius: 8px; background: var(--cd-surface); color: var(--cd-ink-2); transition: background .12s, border-color .12s; }
+  .cd .cd-state-opt:hover { background: var(--cd-bg); }
+  .cd .cd-state-opt.is-on { background: var(--st-bg); border-color: var(--st); color: var(--st-fg); box-shadow: inset 0 0 0 1px var(--st); }
+  .cd .cd-quick { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--cd-line-strong); color: var(--cd-ink-2); background: var(--cd-surface); }
+  .cd .cd-quick:hover { background: var(--cd-sunken); color: var(--cd-ink); }
+  .cd .cd-quick.is-on { background: var(--cd-clay-soft); border-color: var(--cd-clay-line); color: var(--cd-clay-deep); }
+  .cd .cd-btn-danger { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 14px; border-radius: 8px; color: var(--cd-red-ink); }
+  .cd .cd-btn-danger:hover { background: var(--cd-red-soft); }
+  @media (max-width: 520px) {
+    .cd .cd-state-opts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cd .cd-modal-back { align-items: flex-end; padding: 0; }
+    .cd .cd-modal { border-radius: 16px 16px 0 0; max-height: 92vh; }
+    .cd .cd-modal-foot { border-radius: 0; }
+  }
+  @keyframes cd-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes cd-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .cd .cd-modal-back, .cd .cd-modal { animation: none; } }
   .cd .cd-form-compact { background: var(--cd-sunken); border-color: var(--cd-line); border-radius: 10px; }
   .cd .cd-chip { background: transparent; color: var(--cd-ink-2); border-color: var(--cd-line-strong); }
   .cd .cd-chip:not(.cd-chip-on):not(.cd-chip-accent):hover { border-color: var(--cd-ink-3); color: var(--cd-ink); }
@@ -292,8 +343,10 @@ const CAT_PALETTE = [
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 /* ---------- PLANNER: ESTADOS DE TAREA Y UTILIDADES ----------
-   Una tarea vive en comite.tareas:
-   { id, text, resp, due ("AAAA-MM-DD" | null), estado, temaId (id del tema de la agenda | null), ts }
+   El Planner es un tablero único y continuo: las tareas viven en data.tareas,
+   fuera de los comités mensuales:
+   { id, text, resp, due ("AAAA-MM-DD" | null), hora ("HH:MM" | null), estado, ts,
+     comiteId + temaId (tema de la agenda de ese comité al que está ligada | null) }
    Los responsables disponibles viven en data.miembros (lista de nombres). */
 const TASK_STATES = {
   todo:      { label: "Por hacer",  color: "bg-slate-100 text-slate-600 border-slate-200",   head: "bg-slate-100 text-slate-700",   dot: "text-slate-400",   icon: Circle,       cd: "cd-st-todo" },
@@ -314,20 +367,43 @@ const fmtDue = (iso) => {
   const [, m, d] = iso.split("-").map(Number);
   return `${d} ${MONTHS[m - 1].slice(0, 3).toLowerCase()}`;
 };
-const isOverdue = (t) => !!t.due && t.estado !== "hecho" && t.due < todayISO();
-const isDueToday = (t) => !!t.due && t.estado !== "hecho" && t.due === todayISO();
-/* Orden dentro de una columna: vencidas primero, luego por fecha, al final sin fecha */
+/* Hora límite: t.hora ("HH:MM", 24 h) acompaña a t.due. Las tareas anteriores no la
+   tienen y vencen al terminar el día. */
+const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const fmtHora = (hm) => {
+  if (!hm) return "";
+  const [h, m] = hm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "a. m." : "p. m."}`;
+};
+const isOverdue = (t) => {
+  if (!t.due || t.estado === "hecho") return false;
+  const hoy = todayISO();
+  return t.due < hoy || (t.due === hoy && !!t.hora && t.hora < nowHM());
+};
+const isDueToday = (t) => !!t.due && t.estado !== "hecho" && t.due === todayISO() && !isOverdue(t);
+/* Orden dentro de una columna: vencidas primero, luego por fecha y hora, al final sin fecha */
 const sortTareas = (a, b) => {
   if (!!a.due !== !!b.due) return a.due ? -1 : 1;
   if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+  if (a.due && (a.hora || "") !== (b.hora || "")) return (a.hora || "99:99") < (b.hora || "99:99") ? -1 : 1;
   return (a.id || 0) - (b.id || 0);
 };
 /* Responsables: los registrados más cualquier nombre ya usado en agenda o tareas */
-function allMiembros(data, comite) {
+function allMiembros(data, comite, tareas) {
   const set = new Set(data.miembros || SEED_MIEMBROS);
   (comite.agenda || []).forEach((a) => (a.resp || []).forEach((r) => set.add(r)));
-  (comite.tareas || []).forEach((t) => t.resp && set.add(t.resp));
+  (tareas || []).forEach((t) => t.resp && set.add(t.resp));
   return [...set];
+}
+/* Tareas del tablero único. Los documentos anteriores las guardaban dentro de cada
+   comité (comite.tareas) y copiaban las pendientes al cerrar el mes con el mismo id:
+   mientras no exista data.tareas se unen todas y gana la copia del comité más reciente.
+   La primera escritura de una tarea deja data.tareas guardado. */
+function getTareas(data) {
+  if (Array.isArray(data.tareas)) return data.tareas;
+  const porId = new Map();
+  (data.comites || []).forEach((c) => (c.tareas || []).forEach((t) => porId.set(t.id, { ...t, comiteId: c.id })));
+  return [...porId.values()];
 }
 
 /* ---------- SEED: COMITÉ JUNIO 2026 ---------- */
@@ -437,9 +513,9 @@ const SEED_NUEVOS = [
 ];
 
 /* ---------- LÓGICA DE COMITÉS ---------- */
-function carryOver(prev, nombre) {
-  // Los temas se renumeran en el nuevo comité; idMap conserva la relación tarea → tema
-  const idMap = {};
+function carryOver(prev, nombre, idMap = {}) {
+  // Los temas se renumeran en el nuevo comité; idMap (id anterior → id nuevo) permite
+  // a quien llama volver a ligar las tareas del Planner a su tema
   const fromAgenda = prev.agenda.filter((a) => !a.done).map((a, i) => {
     const { done, ...rest } = a;
     idMap[a.id] = i + 1;
@@ -452,19 +528,15 @@ function carryOver(prev, nombre) {
     nuevo: true,
   }));
   const agenda = [...fromAgenda, ...fromNuevos].map((a, i) => ({ ...a, id: i + 1 }));
-  // Las tareas no hechas se arrastran; si su tema se completó, quedan sueltas
-  const tareas = (prev.tareas || [])
-    .filter((t) => t.estado !== "hecho")
-    .map((t) => ({ ...t, temaId: t.temaId != null && idMap[t.temaId] ? idMap[t.temaId] : null }));
-  return { id: "c" + Date.now(), nombre, agenda, nuevos: [], release: null, tareas };
+  return { id: "c" + Date.now(), nombre, agenda, nuevos: [], release: null };
 }
 
 function buildSeed() {
-  const junio = { id: "jun2026", nombre: "Junio 2026", agenda: JUNIO_AGENDA, nuevos: SEED_NUEVOS, release: JUNIO_RELEASE, tareas: [] };
+  const junio = { id: "jun2026", nombre: "Junio 2026", agenda: JUNIO_AGENDA, nuevos: SEED_NUEVOS, release: JUNIO_RELEASE };
   const julio = carryOver(junio, "Julio 2026");
   julio.id = "jul2026";
   julio.agenda.push({ id: julio.agenda.length + 1, cat: "comercial", text: "Revisión de la integración con el proveedor para aceptación o rechazo de facturas de fiducias", resp: ["Ximena"] });
-  return { categorias: SEED_CATS, miembros: SEED_MIEMBROS, activoId: "jul2026", comites: [junio, julio] };
+  return { categorias: SEED_CATS, miembros: SEED_MIEMBROS, activoId: "jul2026", comites: [junio, julio], tareas: [] };
 }
 
 function resolveCat(key, customCats) {
@@ -567,7 +639,7 @@ function useComiteData() {
 }
 
 /* ---------- AGENDA VIEW ---------- */
-function AgendaView({ comite, customCats, miembros, onToggle, onToggleProceso, onTogglePrio, onAddTarea, onUpdateTarea }) {
+function AgendaView({ comite, tareas, customCats, miembros, onToggle, onToggleProceso, onTogglePrio, onAddTarea, onUpdateTarea }) {
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -577,10 +649,10 @@ function AgendaView({ comite, customCats, miembros, onToggle, onToggleProceso, o
   // Tareas del planner agrupadas por tema
   const tareasPorTema = useMemo(() => {
     const g = {};
-    (comite.tareas || []).forEach((t) => { if (t.temaId != null) (g[t.temaId] = g[t.temaId] || []).push(t); });
+    tareas.forEach((t) => { if (t.comiteId === comite.id && t.temaId != null) (g[t.temaId] = g[t.temaId] || []).push(t); });
     Object.values(g).forEach((arr) => arr.sort((a, b) => TASK_ORDER.indexOf(a.estado) - TASK_ORDER.indexOf(b.estado) || sortTareas(a, b)));
     return g;
-  }, [comite.tareas]);
+  }, [tareas, comite.id]);
   const doneCount = agenda.filter((a) => a.done).length;
 
   const chipCats = [
@@ -751,7 +823,7 @@ function AgendaView({ comite, customCats, miembros, onToggle, onToggleProceso, o
                                 </button>
                                 <span className={`leading-snug ${hecha ? "text-slate-400 line-through" : "text-slate-600"}`}><RefText text={t.text} /></span>
                                 {t.resp && <span className="text-slate-400 shrink-0">· {t.resp}</span>}
-                                {t.due && !hecha && <span className={`shrink-0 ${isOverdue(t) ? "text-rose-600 font-medium" : "text-slate-400"}`}>· {isOverdue(t) ? "vencida " : ""}{fmtDue(t.due)}</span>}
+                                {t.due && !hecha && <span className={`shrink-0 ${isOverdue(t) ? "text-rose-600 font-medium" : "text-slate-400"}`}>· {isOverdue(t) ? "vencida " : ""}{fmtDue(t.due)}{t.hora ? ` ${fmtHora(t.hora)}` : ""}</span>}
                               </li>
                             );
                           })}
@@ -1008,7 +1080,7 @@ function ReleaseView({ comite }) {
 }
 
 /* ---------- PLANNER: FORMULARIO DE TAREA ----------
-   Se usa tanto en la pestaña Planner como dentro de un tema de la agenda (compact).
+   Se usa tanto en la página Planner como dentro de un tema de la agenda (compact).
    onSubmit recibe { text, resp, due, temaId, newMember }: newMember viene cuando el
    responsable se escribió por primera vez, para guardarlo en data.miembros en el mismo save. */
 function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, defaultTema, initial, submitLabel }) {
@@ -1016,9 +1088,12 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
   const [resp, setResp] = useState(initial && initial.resp ? initial.resp : "");
   const [newResp, setNewResp] = useState("");
   const [due, setDue] = useState(initial && initial.due ? initial.due : "");
+  const [hora, setHora] = useState(initial && initial.hora ? initial.hora : "");
   const [temaId, setTemaId] = useState(initial && initial.temaId != null ? String(initial.temaId) : defaultTema != null ? String(defaultTema) : "");
 
-  const ready = text.trim() && (resp !== "__new__" || newResp.trim());
+  // Una tarea con fecha límite tiene que llevar también la hora
+  const faltaHora = !!due && !hora;
+  const ready = text.trim() && (resp !== "__new__" || newResp.trim()) && !faltaHora;
   const editing = !!initial;
 
   const submit = () => {
@@ -1028,12 +1103,14 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
       text: text.trim(),
       resp: r || null,
       due: due || null,
+      hora: due ? hora : null,
       temaId: temaId ? Number(temaId) : null,
       newMember: resp === "__new__" ? r : null,
     });
     if (editing) return;
     setText("");
     setDue("");
+    setHora("");
     setTemaId(defaultTema != null ? String(defaultTema) : "");
     if (resp === "__new__") { setResp(r); setNewResp(""); }
   };
@@ -1087,7 +1164,10 @@ function TaskForm({ miembros, agenda, customCats, onSubmit, onCancel, compact, d
             className={`sm:w-40 ${inputCls}`}
           />
         )}
-        <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={`sm:w-40 ${inputCls}`} title="Fecha límite (opcional)" />
+        <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={`sm:w-40 ${inputCls}`} title="Fecha límite (opcional)" aria-label="Fecha límite" />
+        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} disabled={!due}
+          className={`sm:w-32 ${inputCls} disabled:opacity-50 ${faltaHora ? "!border-rose-400" : ""}`}
+          title={faltaHora ? "Elige la hora límite" : due ? "Hora límite" : "Elige primero la fecha"} aria-label="Hora límite" aria-invalid={faltaHora} />
         <button
           onClick={submit}
           disabled={!ready}
@@ -1164,7 +1244,7 @@ function TaskMeta({ t, tema, customCats, hideTema }) {
       {t.due && (
         <Badge className={overdue ? "cd-b-danger" : today ? "cd-b-warn" : t.estado === "hecho" ? "cd-b-muted" : "cd-b-outline"}>
           {overdue ? <AlertCircle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
-          {overdue ? `Vencida · ${fmtDue(t.due)}` : today ? "Vence hoy" : fmtDue(t.due)}
+          {overdue ? `Vencida · ${fmtDue(t.due)}` : today ? "Vence hoy" : fmtDue(t.due)}{t.hora ? ` · ${fmtHora(t.hora)}` : ""}
         </Badge>
       )}
     </div>
@@ -1172,7 +1252,9 @@ function TaskMeta({ t, tema, customCats, hideTema }) {
 }
 
 /* ---------- PLANNER VIEW ---------- */
-function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }) {
+/* comite es el comité actual: las tareas nuevas se ligan a temas de su agenda.
+   comites es el historial completo, para resolver el tema de tareas más antiguas. */
+function PlannerView({ tareas, comite, comites, customCats, miembros, onAdd, onUpdate, onRemove }) {
   const [me, setMeState] = useState(loadMe);
   const [mode, setMode] = useState("board"); // board | list | week
   const [respFilter, setRespFilter] = useState(() => (loadMe() ? "__me__" : "all"));
@@ -1183,8 +1265,8 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
 
   const setMe = (v) => { setMeState(v); saveMe(v); setRespFilter(v ? "__me__" : "all"); };
 
-  const tareas = comite.tareas || [];
-  const temaDe = (t) => (t.temaId != null ? comite.agenda.find((a) => a.id === t.temaId) : null);
+  const comiteDe = (t) => comites.find((c) => c.id === t.comiteId) || comite;
+  const temaDe = (t) => (t.temaId != null ? comiteDe(t).agenda.find((a) => a.id === t.temaId) : null);
 
   const counts = TASK_ORDER.reduce((acc, k) => { acc[k] = tareas.filter((t) => t.estado === k).length; return acc; }, {});
   const vencidas = tareas.filter(isOverdue).length;
@@ -1211,8 +1293,9 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
   const saveEdit = (id, patch) => { onUpdate(id, patch); setEditingId(null); };
 
   const formProps = { miembros, agenda: comite.agenda, customCats };
+  // Al editar, el selector de tema ofrece la agenda del comité al que pertenece la tarea
   const rowProps = (t) => ({
-    t, tema: temaDe(t), customCats, formProps,
+    t, tema: temaDe(t), customCats, formProps: { ...formProps, agenda: comiteDe(t).agenda },
     editing: editingId === t.id,
     onEdit: () => setEditingId(editingId === t.id ? null : t.id),
     onSaveEdit: (patch) => saveEdit(t.id, patch),
@@ -1229,12 +1312,13 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
 
   /* Toda la vista va dentro de .cd: el tema Claude Design definido en <style> */
   return (
-    <div className="cd space-y-5">
+    <div className="cd cd-page">
+     <div className="cd-page-inner space-y-5">
       {/* Encabezado */}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
         <div>
-          <h2 className="cd-title">Planner</h2>
-          <p className="cd-sub">Tareas del comité · {comite.nombre}</p>
+          <h1 className="cd-title">Planner</h1>
+          <p className="cd-sub">Tablero continuo de tareas del equipo de Facturación Electrónica</p>
         </div>
         {tareas.length > 0 && <p className="cd-hint">{counts.hecho} de {tareas.length} tarea(s) hechas</p>}
       </div>
@@ -1259,10 +1343,10 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
       {/* Nueva tarea */}
       <div className="cd-card p-4">
         <p className="flex items-center gap-2 cd-h3 mb-3">
-          <PlusCircle className="w-4 h-4 cd-accent" /> Nueva tarea en {comite.nombre}
+          <PlusCircle className="w-4 h-4 cd-accent" /> Nueva tarea
         </p>
         <TaskForm {...formProps} onSubmit={onAdd} />
-        <p className="cd-hint mt-2">Tip: también puedes crear tareas desde cada tema en la pestaña Agenda. Enter para agregar rápido.</p>
+        <p className="cd-hint mt-2">Tip: el tema es opcional y sale de la agenda de {comite.nombre}; también puedes crear tareas desde cada tema en <a href="#/comite" className="underline">Comité</a>. Enter para agregar rápido.</p>
       </div>
 
       {/* Controles */}
@@ -1299,8 +1383,8 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
       {tareas.length === 0 && (
         <div className="cd-empty">
           <Kanban className="w-8 h-8 mx-auto mb-2" />
-          <p className="cd-h3">Aún no hay tareas en {comite.nombre}</p>
-          <p className="cd-hint mt-1">Crea la primera arriba o desde un tema de la agenda.</p>
+          <p className="cd-h3">Aún no hay tareas</p>
+          <p className="cd-hint mt-1">Crea la primera arriba o desde un tema de la agenda del Comité.</p>
         </div>
       )}
 
@@ -1408,6 +1492,171 @@ function PlannerView({ comite, customCats, miembros, onAdd, onUpdate, onRemove }
           </div>
         );
       })()}
+     </div>
+
+      {(() => {
+        const t = editingId != null ? tareas.find((x) => x.id === editingId) : null;
+        if (!t) return null;
+        return (
+          <TaskEditDialog key={t.id} t={t} miembros={miembros} agenda={comiteDe(t).agenda} customCats={customCats}
+            onSave={(patch) => saveEdit(t.id, patch)}
+            onCancel={() => setEditingId(null)}
+            onRemove={() => { if (window.confirm("¿Eliminar esta tarea?")) { onRemove(t.id); setEditingId(null); } }} />
+        );
+      })()}
+    </div>
+  );
+}
+
+/* Diálogo para editar una tarea del Planner: todos los campos con su etiqueta,
+   estado incluido. onSave recibe el mismo patch que TaskForm más { estado }. */
+function TaskEditDialog({ t, tema, miembros, agenda, customCats, onSave, onCancel, onRemove }) {
+  const [text, setText] = useState(t.text);
+  const [estado, setEstado] = useState(TASK_STATES[t.estado] ? t.estado : "todo");
+  const [resp, setResp] = useState(t.resp || "");
+  const [newResp, setNewResp] = useState("");
+  const [due, setDue] = useState(t.due || "");
+  const [hora, setHora] = useState(t.hora || "");
+  const [temaId, setTemaId] = useState(t.temaId != null ? String(t.temaId) : "");
+  const textRef = useRef(null);
+
+  // Una tarea con fecha límite tiene que llevar también la hora
+  const faltaHora = !!due && !hora;
+  const ready = text.trim() && (resp !== "__new__" || newResp.trim()) && !faltaHora;
+  const submit = () => {
+    if (!ready) return;
+    const r = resp === "__new__" ? newResp.trim() : resp;
+    onSave({
+      text: text.trim().replace(/\s*\n+\s*/g, " "),
+      estado,
+      resp: r || null,
+      due: due || null,
+      hora: due ? hora : null,
+      temaId: temaId ? Number(temaId) : null,
+      newMember: resp === "__new__" ? r : null,
+    });
+  };
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prevOverflow; };
+  }, []);
+
+  const temasPorCat = useMemo(() => {
+    const g = {};
+    (agenda || []).filter((a) => !a.done || String(a.id) === temaId).forEach((a) => { (g[a.cat] = g[a.cat] || []).push(a); });
+    return Object.entries(g);
+  }, [agenda, temaId]);
+
+  // Si el responsable guardado ya no está en la lista, se conserva como opción
+  const opcionesResp = t.resp && !miembros.includes(t.resp) ? [...miembros, t.resp] : miembros;
+  const quick = [["Hoy", todayISO()], ["Mañana", addDaysISO(1)], ["En una semana", addDaysISO(7)]];
+  const horas = ["08:00", "12:00", "14:00", "17:00"];
+
+  return (
+    <div className="cd-modal-back" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="cd-modal" role="dialog" aria-modal="true" aria-labelledby="cd-edit-title">
+        <div className="cd-modal-head">
+          <Pencil className="w-4 h-4 cd-accent" />
+          <h2 id="cd-edit-title" className="cd-modal-title">Editar tarea</h2>
+          <button onClick={onCancel} className="ml-auto cd-icon-btn" title="Cerrar (Esc)"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="cd-modal-body">
+          <div>
+            <label className="cd-label" htmlFor="cd-edit-text">Descripción</label>
+            <textarea
+              id="cd-edit-text" ref={textRef} rows={3} value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+              placeholder="¿Qué hay que hacer?"
+              className="cd-field"
+            />
+            <p className="cd-hint mt-1">Si incluye «HU 12345» se enlaza a Azure DevOps.</p>
+          </div>
+
+          <div>
+            <span className="cd-label">Estado</span>
+            <div className="cd-state-opts">
+              {TASK_ORDER.map((k) => {
+                const S = TASK_STATES[k]; const SI = S.icon;
+                return (
+                  <button key={k} type="button" onClick={() => setEstado(k)} aria-pressed={estado === k} className={`cd-state-opt ${S.cd} ${estado === k ? "is-on" : ""}`}>
+                    <SI className="w-3.5 h-3.5 cd-st-icon" /> {S.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="cd-label" htmlFor="cd-edit-resp"><User className="w-3.5 h-3.5" /> Responsable</label>
+              <select id="cd-edit-resp" value={resp} onChange={(e) => setResp(e.target.value)} className="cd-field">
+                <option value="">Sin responsable</option>
+                {opcionesResp.map((m) => (<option key={m} value={m}>{m}</option>))}
+                <option value="__new__">+ Nuevo responsable…</option>
+              </select>
+              {resp === "__new__" && (
+                <input value={newResp} onChange={(e) => setNewResp(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Nombre del responsable" autoFocus className="cd-field mt-2" />
+              )}
+            </div>
+            <div>
+              <label className="cd-label" htmlFor="cd-edit-due"><Calendar className="w-3.5 h-3.5" /> Fecha límite</label>
+              <input id="cd-edit-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="cd-field" />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {quick.map(([label, iso]) => (
+                  <button key={label} type="button" onClick={() => setDue(iso)} className={`cd-quick ${due === iso ? "is-on" : ""}`}>{label}</button>
+                ))}
+                {due && <button type="button" onClick={() => { setDue(""); setHora(""); }} className="cd-quick">Sin fecha</button>}
+              </div>
+            </div>
+          </div>
+
+          {due && (
+            <div>
+              <label className="cd-label" htmlFor="cd-edit-hora"><Clock className="w-3.5 h-3.5" /> Hora límite</label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input id="cd-edit-hora" type="time" value={hora} onChange={(e) => setHora(e.target.value)} aria-invalid={faltaHora}
+                  className={`cd-field ${faltaHora ? "is-invalid" : ""}`} style={{ width: 150 }} />
+                {horas.map((h) => (
+                  <button key={h} type="button" onClick={() => setHora(h)} className={`cd-quick ${hora === h ? "is-on" : ""}`}>{fmtHora(h)}</button>
+                ))}
+              </div>
+              {faltaHora && <p className="cd-error mt-1.5"><AlertCircle className="w-3.5 h-3.5" /> Elige la hora límite para poder guardar.</p>}
+            </div>
+          )}
+
+          <div>
+            <label className="cd-label" htmlFor="cd-edit-tema"><Tag className="w-3.5 h-3.5" /> Tema de la agenda</label>
+            <select id="cd-edit-tema" value={temaId} onChange={(e) => setTemaId(e.target.value)} className="cd-field">
+              <option value="">Sin tema asociado</option>
+              {temasPorCat.map(([k, items]) => (
+                <optgroup key={k} label={resolveCat(k, customCats).label}>
+                  {items.map((a) => (
+                    <option key={a.id} value={a.id}>{String(a.id).padStart(2, "0")} · {a.text.length > 70 ? a.text.slice(0, 70) + "…" : a.text}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {t.ts && <p className="cd-hint">Creada el {t.ts}</p>}
+        </div>
+
+        <div className="cd-modal-foot">
+          <button type="button" onClick={onRemove} className="cd-btn-danger"><Trash2 className="w-4 h-4" /> Eliminar</button>
+          <button type="button" onClick={onCancel} className="ml-auto px-3 py-2 text-sm cd-btn-ghost">Cancelar</button>
+          <button type="button" onClick={submit} disabled={!ready} className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed cd-btn-primary">
+            <CheckCircle2 className="w-4 h-4" /> Guardar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1448,7 +1697,6 @@ function TaskRow({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, 
           <button onClick={onRemove} className="cd-icon-btn is-danger" title="Eliminar tarea"><Trash2 className="w-4 h-4" /></button>
         </div>
       </div>
-      {editing && <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />}
     </li>
   );
 }
@@ -1456,19 +1704,14 @@ function TaskRow({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, 
 function TaskCard({ t, tema, customCats, formProps, editing, onEdit, onSaveEdit, onCancelEdit, onRemove, dragging, onDragStart, onDragEnd, onMove }) {
   const i = TASK_ORDER.indexOf(t.estado);
   const overdue = isOverdue(t);
-  if (editing) {
-    return (
-      <div className="cd-task is-editing">
-        <TaskForm compact {...formProps} initial={t} onSubmit={onSaveEdit} onCancel={onCancelEdit} />
-      </div>
-    );
-  }
   return (
     <div
       draggable
       onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(); }}
       onDragEnd={onDragEnd}
-      className={`cd-task ${dragging ? "is-dragging" : ""} ${overdue ? "is-overdue" : ""}`}
+      onDoubleClick={onEdit}
+      title="Doble clic para editar"
+      className={`cd-task ${dragging ? "is-dragging" : ""} ${overdue ? "is-overdue" : ""} ${editing ? "is-editing" : ""}`}
     >
       <p className={`cd-text ${t.estado === "hecho" ? "is-done" : ""}`}><RefText text={t.text} /></p>
       <div className="mt-2"><TaskMeta t={t} tema={tema} customCats={customCats} /></div>
@@ -1519,12 +1762,27 @@ function SetupBanner({ status }) {
 }
 
 /* ---------- ROOT ---------- */
+const sectionFromHash = () => (/^#\/?comite/i.test(window.location.hash) ? "comite" : "planner");
+const goPlanner = () => { window.location.hash = "#/planner"; };
+
 function App() {
   const { data, save, status } = useComiteData();
   const [viewId, setViewId] = useState(null);
   const [tab, setTab] = useState("agenda");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  // Sección según la dirección: #/planner (por defecto) o #/comite
+  const [section, setSection] = useState(sectionFromHash);
+  useEffect(() => {
+    const onHash = () => { setSection(sectionFromHash()); window.scrollTo(0, 0); };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  useEffect(() => {
+    document.title = section === "planner"
+      ? "Planner — Facturación Electrónica FE/RE Sinco"
+      : "Comité Mensual de Facturación Electrónica — FE/RE Sinco";
+  }, [section]);
 
   useEffect(() => {
     if (data && !viewId) {
@@ -1546,6 +1804,9 @@ function App() {
   }
 
   const comite = data.comites.find((c) => c.id === viewId) || data.comites[data.comites.length - 1];
+  // Comité actual: a su agenda se ligan las tareas nuevas creadas desde el Planner
+  const activo = data.comites.find((c) => c.id === data.activoId) || data.comites[data.comites.length - 1];
+  const tareas = getTareas(data);
   const customCats = data.categorias || [];
   const doneCount = comite.agenda.filter((a) => a.done).length;
   const huCount = comite.release ? Object.values(comite.release.modulos).reduce((a, m) => a + m.features.length, 0) : 0;
@@ -1557,7 +1818,8 @@ function App() {
   // y, si se confirma, sus tareas pasan a "Hecho" en la misma escritura.
   const toggleAgenda = (itemId) => {
     const item = comite.agenda.find((a) => a.id === itemId);
-    const abiertas = item && !item.done ? (comite.tareas || []).filter((t) => t.temaId === itemId && t.estado !== "hecho") : [];
+    const delTema = (t) => t.comiteId === comite.id && t.temaId === itemId && t.estado !== "hecho";
+    const abiertas = item && !item.done ? tareas.filter(delTema) : [];
     if (abiertas.length > 0) {
       const ok = window.confirm(
         `Este tema tiene ${abiertas.length} tarea(s) abierta(s) en el Planner:\n\n` +
@@ -1566,11 +1828,14 @@ function App() {
       );
       if (!ok) return;
     }
-    updateComite(comite.id, (c) => ({
-      ...c,
-      agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, done: a.done ? false : true, status: a.status === "proceso" ? undefined : a.status } : a)),
-      tareas: abiertas.length ? (c.tareas || []).map((t) => (t.temaId === itemId && t.estado !== "hecho" ? { ...t, estado: "hecho" } : t)) : c.tareas,
-    }));
+    save({
+      ...data,
+      ...(abiertas.length ? { tareas: tareas.map((t) => (delTema(t) ? { ...t, estado: "hecho" } : t)) } : {}),
+      comites: data.comites.map((c) => (c.id === comite.id ? {
+        ...c,
+        agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, done: a.done ? false : true, status: a.status === "proceso" ? undefined : a.status } : a)),
+      } : c)),
+    });
   };
   const toggleProceso = (itemId) => updateComite(comite.id, (c) => ({
     ...c, agenda: c.agenda.map((a) => (a.id === itemId ? { ...a, status: a.status === "proceso" ? undefined : "proceso", done: a.status === "proceso" ? a.done : false } : a)),
@@ -1581,27 +1846,22 @@ function App() {
   }));
   // Acciones planner (tareas). Un solo save por acción: si viene un responsable nuevo,
   // se guarda en data.miembros en la misma escritura para no pisar cambios.
-  const miembros = allMiembros(data, comite);
-  const addTarea = ({ newMember, ...t }) => {
-    const tarea = { id: Date.now(), estado: "todo", ...t, ts: new Date().toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) };
+  // Las tareas se guardan en data.tareas (tablero único), no dentro del comité.
+  const miembros = allMiembros(data, section === "planner" ? activo : comite, tareas);
+  // comiteId: comité a cuya agenda pertenece el tema elegido (el actual desde el Planner,
+  // el que se está viendo desde la Agenda)
+  const addTarea = (comiteId) => ({ newMember, ...t }) => {
+    const tarea = { id: Date.now(), estado: "todo", ...t, comiteId, ts: new Date().toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) };
     const nextMiembros = newMember && !miembros.includes(newMember) ? [...(data.miembros || SEED_MIEMBROS), newMember] : (data.miembros || SEED_MIEMBROS);
-    save({
-      ...data,
-      miembros: nextMiembros,
-      comites: data.comites.map((c) => (c.id === comite.id ? { ...c, tareas: [...(c.tareas || []), tarea] } : c)),
-    });
+    save({ ...data, miembros: nextMiembros, tareas: [...tareas, tarea] });
   };
   const updateTarea = (id, { newMember, ...patch }) => {
     const nextMiembros = newMember && !miembros.includes(newMember) ? [...(data.miembros || SEED_MIEMBROS), newMember] : (data.miembros || SEED_MIEMBROS);
-    save({
-      ...data,
-      miembros: nextMiembros,
-      comites: data.comites.map((c) => (c.id === comite.id ? { ...c, tareas: (c.tareas || []).map((t) => (t.id === id ? { ...t, ...patch } : t)) } : c)),
-    });
+    save({ ...data, miembros: nextMiembros, tareas: tareas.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
   };
-  const removeTarea = (id) => updateComite(comite.id, (c) => ({ ...c, tareas: (c.tareas || []).filter((t) => t.id !== id) }));
-  const tareasPend = (comite.tareas || []).filter((t) => t.estado !== "hecho").length;
-  const tareasVenc = (comite.tareas || []).filter(isOverdue).length;
+  const removeTarea = (id) => save({ ...data, tareas: tareas.filter((t) => t.id !== id) });
+  const tareasPend = tareas.filter((t) => t.estado !== "hecho").length;
+  const tareasVenc = tareas.filter(isOverdue).length;
 
   // Acciones nuevos
   const addNuevo = (item) => updateComite(comite.id, (c) => ({ ...c, nuevos: [...c.nuevos, item] }));
@@ -1619,8 +1879,14 @@ function App() {
     const nombre = newName.trim();
     if (!nombre) return;
     const last = data.comites[data.comites.length - 1];
-    const nuevo = carryOver(last, nombre);
-    const next = { ...data, comites: [...data.comites, nuevo], activoId: nuevo.id };
+    const idMap = {};
+    const nuevo = carryOver(last, nombre, idMap);
+    // Las tareas siguen en el tablero; las pendientes ligadas a un tema del comité que se
+    // cierra pasan al mismo tema en el nuevo (o quedan sueltas si ese tema se completó)
+    const nextTareas = tareas.map((t) => (t.comiteId === last.id && t.estado !== "hecho"
+      ? { ...t, comiteId: nuevo.id, temaId: t.temaId != null && idMap[t.temaId] ? idMap[t.temaId] : null }
+      : t));
+    const next = { ...data, comites: [...data.comites, nuevo], activoId: nuevo.id, tareas: nextTareas };
     save(next);
     setViewId(nuevo.id);
     setCreating(false);
@@ -1628,8 +1894,40 @@ function App() {
     setTab("agenda");
   };
 
+  const nav = (
+    <nav className="app-nav">
+      <div className="app-nav-inner">
+        <div className="app-nav-brand">
+          <img src="assets/facturacion-electronica.svg" alt="" />
+          <img src="assets/recepcion-electronica.svg" alt="" />
+          <span>Facturación Electrónica · FE/RE Sinco</span>
+        </div>
+        <div className="app-nav-links">
+          <a href="#/planner" className={`app-nav-link ${section === "planner" ? "is-on" : ""}`} aria-current={section === "planner" ? "page" : undefined}>
+            <Kanban className="w-4 h-4" /> Planner{tareasPend ? <span className="app-nav-badge" title={`${tareasPend} tarea(s) pendiente(s)`}>{tareasPend}</span> : null}
+          </a>
+          <a href="#/comite" className={`app-nav-link ${section === "comite" ? "is-on" : ""}`} aria-current={section === "comite" ? "page" : undefined}>
+            <ListChecks className="w-4 h-4" /> Comité
+          </a>
+        </div>
+      </div>
+    </nav>
+  );
+
+  // Planner: funcionalidad principal, ocupa toda la página
+  if (section === "planner") {
+    return (
+      <div className="min-h-screen font-sans" style={{ background: "#FAF9F5" }}>
+        {nav}
+        <SetupBanner status={status} />
+        <PlannerView tareas={tareas} comite={activo} comites={data.comites} customCats={customCats} miembros={miembros} onAdd={addTarea(activo.id)} onUpdate={updateTarea} onRemove={removeTarea} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans">
+      {nav}
       <header className="bg-gradient-to-r from-slate-900 to-blue-900 text-white">
         <div className="max-w-4xl mx-auto px-5 py-6">
           <div className="flex items-center gap-3">
@@ -1692,7 +1990,7 @@ function App() {
             <SummaryCard value={comite.agenda.length} label="Temas en agenda" icon={ListChecks} />
             <SummaryCard value={doneCount} label="Completados" icon={CheckCircle2} />
             <SummaryCard value={comite.nuevos.length} label="Temas nuevos" icon={PlusCircle} />
-            <SummaryCard value={tareasPend} label={tareasVenc ? `Tareas · ${tareasVenc} vencida(s)` : "Tareas pendientes"} icon={Kanban} alert={tareasVenc > 0} onClick={() => setTab("planner")} />
+            <SummaryCard value={tareasPend} label={tareasVenc ? `Tareas · ${tareasVenc} vencida(s)` : "Tareas pendientes"} icon={Kanban} alert={tareasVenc > 0} onClick={goPlanner} />
             <SummaryCard value={huCount} label="HU liberadas" icon={Sparkles} />
             <SummaryCard value={issueCount} label="Issues resueltos" icon={Bug} />
           </div>
@@ -1701,19 +1999,17 @@ function App() {
 
       <SetupBanner status={status} />
 
-      <div className="max-w-4xl mx-auto px-5 sticky top-0 z-10 mt-0">
+      <div className="max-w-4xl mx-auto px-5 sticky top-[53px] z-10 mt-0">
         <div className="flex gap-1 -mt-3 bg-white rounded-xl shadow-sm border border-slate-200 p-1">
           <TabBtn active={tab === "agenda"} onClick={() => setTab("agenda")} icon={ListChecks}>Agenda</TabBtn>
           <TabBtn active={tab === "nuevos"} onClick={() => setTab("nuevos")} icon={PlusCircle}>Nuevos temas</TabBtn>
-          <TabBtn active={tab === "planner"} onClick={() => setTab("planner")} icon={Kanban}>Planner{tareasPend ? ` (${tareasPend})` : ""}</TabBtn>
           <TabBtn active={tab === "release"} onClick={() => setTab("release")} icon={Sparkles}>Release{comite.release ? ` ${comite.release.version}` : ""}</TabBtn>
         </div>
       </div>
 
-      <main className={`${tab === "planner" ? "max-w-6xl" : "max-w-4xl"} mx-auto px-5 py-6`}>
-        {tab === "agenda" && <AgendaView comite={comite} customCats={customCats} miembros={miembros} onToggle={toggleAgenda} onToggleProceso={toggleProceso} onTogglePrio={togglePrio} onAddTarea={addTarea} onUpdateTarea={updateTarea} />}
+      <main className="max-w-4xl mx-auto px-5 py-6">
+        {tab === "agenda" && <AgendaView comite={comite} tareas={tareas} customCats={customCats} miembros={miembros} onToggle={toggleAgenda} onToggleProceso={toggleProceso} onTogglePrio={togglePrio} onAddTarea={addTarea(comite.id)} onUpdateTarea={updateTarea} />}
         {tab === "nuevos" && <NuevosView comite={comite} customCats={customCats} onAdd={addNuevo} onRemove={removeNuevo} onToggle={toggleNuevo} onCreateCat={createCat} />}
-        {tab === "planner" && <PlannerView comite={comite} customCats={customCats} miembros={miembros} onAdd={addTarea} onUpdate={updateTarea} onRemove={removeTarea} />}
         {tab === "release" && <ReleaseView comite={comite} />}
       </main>
 
